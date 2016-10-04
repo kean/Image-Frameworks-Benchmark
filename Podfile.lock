@@ -1,0 +1,58 @@
+PODS:
+  - Alamofire (4.0.1)
+  - AlamofireImage (3.1.0):
+    - Alamofire (~> 4.0)
+  - FLAnimatedImage (1.0.12)
+  - HanekeSwift (0.10.1)
+  - Kingfisher (3.1.1)
+  - Nuke (4.1)
+  - PINCache (2.3)
+  - PINRemoteImage (2.1.4):
+    - PINRemoteImage/FLAnimatedImage (= 2.1.4)
+  - PINRemoteImage/Core (2.1.4):
+    - PINCache (>= 2.1)
+  - PINRemoteImage/FLAnimatedImage (2.1.4):
+    - FLAnimatedImage (>= 1.0)
+    - PINRemoteImage/Core
+  - SDWebImage (3.8.2):
+    - SDWebImage/Core (= 3.8.2)
+  - SDWebImage/Core (3.8.2)
+
+DEPENDENCIES:
+  - AlamofireImage
+  - HanekeSwift (from `https://github.com/Haneke/HanekeSwift.git`, branch `swift-3`)
+  - Kingfisher
+  - Nuke (from `https://github.com/kean/Nuke.git`, branch `master`)
+  - PINRemoteImage
+  - SDWebImage
+
+EXTERNAL SOURCES:
+  HanekeSwift:
+    :branch: swift-3
+    :git: https://github.com/Haneke/HanekeSwift.git
+  Nuke:
+    :branch: master
+    :git: https://github.com/kean/Nuke.git
+
+CHECKOUT OPTIONS:
+  HanekeSwift:
+    :commit: 3fb394f3769303685c9e0e692c9065e6a037b30a
+    :git: https://github.com/Haneke/HanekeSwift.git
+  Nuke:
+    :commit: 68704400e93cbc57f95df93bfb0317b1b6daa956
+    :git: https://github.com/kean/Nuke.git
+
+SPEC CHECKSUMS:
+  Alamofire: 7682d43245de14874acd142ec137b144aa1dd335
+  AlamofireImage: bb8c8351c51cb1633bb6be69b6dbbaff37ce65b7
+  FLAnimatedImage: 4a0b56255d9b05f18b6dd7ee06871be5d3b89e31
+  HanekeSwift: 4113367892828e7700d24a384027de6ebc79aad1
+  Kingfisher: 12b755ae697cc9f0fd3e550db8417fa1233e09ab
+  Nuke: cb592f91de41246a59a7ea96d5dff743ce96bf52
+  PINCache: ce36ed282031b92fc7733ffe831f474ff80fddc2
+  PINRemoteImage: 4ac4011c5caefd6befd99758e09becede05d3226
+  SDWebImage: 098e97e6176540799c27e804c96653ee0833d13c
+
+PODFILE CHECKSUM: 1adcf1bfce9504bf0f3d180c027a0e32faf39028
+
+COCOAPODS: 1.1.0.rc.2
