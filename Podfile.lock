@@ -17,6 +17,7 @@ PODS:
   - SDWebImage (3.8.2):
     - SDWebImage/Core (= 3.8.2)
   - SDWebImage/Core (3.8.2)
+  - YNImageAsync (1.1.0)
 
 DEPENDENCIES:
   - AlamofireImage
@@ -25,6 +26,7 @@ DEPENDENCIES:
   - Nuke (from `https://github.com/kean/Nuke.git`, branch `master`)
   - PINRemoteImage
   - SDWebImage
+  - YNImageAsync
 
 EXTERNAL SOURCES:
   HanekeSwift:
@@ -52,7 +54,8 @@ SPEC CHECKSUMS:
   PINCache: ce36ed282031b92fc7733ffe831f474ff80fddc2
   PINRemoteImage: 4ac4011c5caefd6befd99758e09becede05d3226
   SDWebImage: 098e97e6176540799c27e804c96653ee0833d13c
+  YNImageAsync: a46303954993661fa6be80b17b203492dc7ede12
 
-PODFILE CHECKSUM: 1adcf1bfce9504bf0f3d180c027a0e32faf39028
+PODFILE CHECKSUM: 89eb0f13613246381b875c0214a69d58d1b56459
 
-COCOAPODS: 1.1.0.rc.2
+COCOAPODS: 1.1.1
