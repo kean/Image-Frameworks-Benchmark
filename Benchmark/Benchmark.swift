@@ -13,10 +13,12 @@ import Kingfisher
 import Haneke
 import SDWebImage
 import PINRemoteImage
+import YNImageAsync
 
 class PerformanceTests: XCTestCase {
     
-    let view = UIImageView()
+    // we need to make image view size > 0 in order to avoid Haneke assert
+    let view = UIImageView(frame: CGRect(origin: CGPoint.zero, size: CGSize(width: 1.0, height: 1.0)))
     let urls: [URL] = {
         return (0..<10_000).map { _ in return URL(string: "http://test.com/\(arc4random()).jpeg")! }
     }()
@@ -69,6 +71,14 @@ class PerformanceTests: XCTestCase {
         measure {
             for url in self.urls {
                 self.view.sd_setImage(with: url)
+            }
+        }
+    }
+    
+    func testYNImageAsync() {
+        measure {
+            for url in self.urls {
+                self.view.setImageWithUrl(url)
             }
         }
     }

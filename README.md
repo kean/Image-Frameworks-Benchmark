@@ -8,6 +8,7 @@ Most of the tested frameworks are written in Swift. Couple of Objective-C framew
 - [AlamofireImage](https://github.com/Alamofire/AlamofireImage)
 - [SDWebImage](https://github.com/rs/SDWebImage)
 - [PINRemoteImage](https://github.com/pinterest/PINRemoteImage)
+- [YNImageAsync](https://github.com/ynechaev/YNImageAsync)
 
 ## Main Thread Performance
 
@@ -22,6 +23,7 @@ view.hnk_setImageFromURL(url)
 view.sd_setImage(with: url)
 view.pin_setImage(from: url)
 view.af_setImage(withURL: url)
+view.setImageWithUrl(url)
 ```
 
 Here are the results given as the number of calls that can be made in a second (higher is better):

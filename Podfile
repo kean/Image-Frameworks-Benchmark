@@ -8,4 +8,5 @@ target 'Benchmark' do
 	pod 'HanekeSwift', :git => 'https://github.com/Haneke/HanekeSwift.git', :branch => 'swift-3'
 	pod 'SDWebImage'
 	pod 'PINRemoteImage'
+    pod 'YNImageAsync'
 end

@@ -1,0 +1,6 @@
+framework module YNImageAsync {
+  umbrella header "YNImageAsync-umbrella.h"
+
+  export *
+  module * { export * }
+}
