@@ -46,11 +46,11 @@ extension StringProxy {
             let MD5Calculator = MD5(message)
             let MD5Data = MD5Calculator.calculate()
 
-            let MD5String = NSMutableString()
+            var MD5String = String()
             for c in MD5Data {
-                MD5String.appendFormat("%02x", c)
+                MD5String += String(format: "%02x", c)
             }
-            return MD5String as String
+            return MD5String
 
         } else {
             return base
@@ -281,7 +281,11 @@ class MD5: HashProtocol {
         
         hh.forEach {
             let itemLE = $0.littleEndian
-            result += [UInt8(itemLE & 0xff), UInt8((itemLE >> 8) & 0xff), UInt8((itemLE >> 16) & 0xff), UInt8((itemLE >> 24) & 0xff)]
+            let r1 = UInt8(itemLE & 0xff)
+            let r2 = UInt8((itemLE >> 8) & 0xff)
+            let r3 = UInt8((itemLE >> 16) & 0xff)
+            let r4 = UInt8((itemLE >> 24) & 0xff)
+            result += [r1, r2, r3, r4]
         }
         return result
     }

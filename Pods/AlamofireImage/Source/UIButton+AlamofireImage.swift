@@ -1,7 +1,7 @@
 //
 //  UIButton+AlamofireImage.swift
 //
-//  Copyright (c) 2015-2016 Alamofire Software Foundation (http://alamofire.org/)
+//  Copyright (c) 2015-2017 Alamofire Software Foundation (http://alamofire.org/)
 //
 //  Permission is hereby granted, free of charge, to any person obtaining a copy
 //  of this software and associated documentation files (the "Software"), to deal
@@ -107,7 +107,7 @@ extension UIButton {
 
     /// Asynchronously downloads an image from the specified URL and sets it once the request is finished.
     ///
-    /// If the image is cached locally, the image is set immediately. Otherwise the specified placehoder image will be
+    /// If the image is cached locally, the image is set immediately. Otherwise the specified placeholder image will be
     /// set immediately, and then the remote image will be set once the image request is finished.
     ///
     /// - parameter state:            The control state of the button to set the image on.
@@ -146,7 +146,7 @@ extension UIButton {
 
     /// Asynchronously downloads an image from the specified URL request and sets it once the request is finished.
     ///
-    /// If the image is cached locally, the image is set immediately. Otherwise the specified placehoder image will be
+    /// If the image is cached locally, the image is set immediately. Otherwise the specified placeholder image will be
     /// set immediately, and then the remote image will be set once the image request is finished.
     ///
     /// - parameter state:            The control state of the button to set the image on.
@@ -172,7 +172,14 @@ extension UIButton {
         progressQueue: DispatchQueue = DispatchQueue.main,
         completion: ((DataResponse<UIImage>) -> Void)? = nil)
     {
-        guard !isImageURLRequest(urlRequest, equalToActiveRequestURLForState: state) else { return }
+        guard !isImageURLRequest(urlRequest, equalToActiveRequestURLForState: state) else {
+            let error = AFIError.requestCancelled
+            let response = DataResponse<UIImage>(request: nil, response: nil, data: nil, result: .failure(error))
+
+            completion?(response)
+
+            return
+        }
 
         af_cancelImageRequest(for: state)
 
@@ -191,8 +198,8 @@ extension UIButton {
                 result: .success(image)
             )
 
-            completion?(response)
             setImage(image, for: state)
+            completion?(response)
 
             return
         }
@@ -211,14 +218,12 @@ extension UIButton {
             progress: progress,
             progressQueue: progressQueue,
             completion: { [weak self] response in
-                guard let strongSelf = self else { return }
-
-                completion?(response)
-
                 guard
+                    let strongSelf = self,
                     strongSelf.isImageURLRequest(response.request, equalToActiveRequestURLForState: state) &&
                     strongSelf.imageRequestReceipt(for: state)?.receiptID == downloadID
                 else {
+                    completion?(response)
                     return
                 }
 
@@ -227,6 +232,8 @@ extension UIButton {
                 }
 
                 strongSelf.setImageRequestReceipt(nil, for: state)
+
+                completion?(response)
             }
         )
 
@@ -247,7 +254,7 @@ extension UIButton {
 
     /// Asynchronously downloads an image from the specified URL and sets it once the request is finished.
     ///
-    /// If the image is cached locally, the image is set immediately. Otherwise the specified placehoder image will be
+    /// If the image is cached locally, the image is set immediately. Otherwise the specified placeholder image will be
     /// set immediately, and then the remote image will be set once the image request is finished.
     ///
     /// - parameter state:            The control state of the button to set the image on.
@@ -286,7 +293,7 @@ extension UIButton {
 
     /// Asynchronously downloads an image from the specified URL request and sets it once the request is finished.
     ///
-    /// If the image is cached locally, the image is set immediately. Otherwise the specified placehoder image will be
+    /// If the image is cached locally, the image is set immediately. Otherwise the specified placeholder image will be
     /// set immediately, and then the remote image will be set once the image request is finished.
     ///
     /// - parameter state:            The control state of the button to set the image on.
@@ -312,7 +319,14 @@ extension UIButton {
         progressQueue: DispatchQueue = DispatchQueue.main,
         completion: ((DataResponse<UIImage>) -> Void)? = nil)
     {
-        guard !isImageURLRequest(urlRequest, equalToActiveRequestURLForState: state) else { return }
+        guard !isImageURLRequest(urlRequest, equalToActiveRequestURLForState: state) else {
+            let error = AFIError.requestCancelled
+            let response = DataResponse<UIImage>(request: nil, response: nil, data: nil, result: .failure(error))
+
+            completion?(response)
+
+            return
+        }
 
         af_cancelBackgroundImageRequest(for: state)
 
@@ -331,8 +345,8 @@ extension UIButton {
                 result: .success(image)
             )
 
-            completion?(response)
             setBackgroundImage(image, for: state)
+            completion?(response)
 
             return
         }
@@ -351,14 +365,12 @@ extension UIButton {
             progress: progress,
             progressQueue: progressQueue,
             completion: { [weak self] response in
-                guard let strongSelf = self else { return }
-
-                completion?(response)
-
                 guard
+                    let strongSelf = self,
                     strongSelf.isBackgroundImageURLRequest(response.request, equalToActiveRequestURLForState: state) &&
                     strongSelf.backgroundImageRequestReceipt(for: state)?.receiptID == downloadID
                 else {
+                    completion?(response)
                     return
                 }
 
@@ -367,6 +379,8 @@ extension UIButton {
                 }
 
                 strongSelf.setBackgroundImageRequestReceipt(nil, for: state)
+
+                completion?(response)
             }
         )
 

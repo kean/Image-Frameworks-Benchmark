@@ -1,6 +1,6 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2016 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2017 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
@@ -9,25 +9,21 @@ import Foundation
 /// All `CancellationTokenSource` methods are thread safe.
 public final class CancellationTokenSource {
     public private(set) var isCancelling = false
-    private var observers = [(Void) -> Void]()
+    private var observers = [() -> Void]()
     private let lock: Lock
-    
-    public var token: CancellationToken {
-        return CancellationToken(source: self)
-    }
-    
-    public init() {
-        self.lock = Lock()
-    }
-    
-    // Allows to create cts with a shared mutex to avoid excessive allocations.
-    // This optimization gives you small wins in absolute numbers. It's also
-    // tricky to get right thus `internal` access modifier.
+
+    /// Creates a new token associated with the source.
+    public var token: CancellationToken { return CancellationToken(source: self) }
+
+    /// Initializes the `CancellationTokenSource` instance.
+    public init() { self.lock = Lock() }
+
+    /// Allows to create cts with a shared lock to avoid excessive allocations.
+    /// This is tricky to use thus `internal` access modifier.
     internal init(lock: Lock) { self.lock = lock }
-    internal static let lock = Lock()
-    
-    fileprivate func register(_ closure: @escaping (Void) -> Void) {
-        if isCancelling { closure(); return } // fast pre-lock check
+
+    fileprivate func register(_ closure: @escaping () -> Void) {
+        guard !isCancelling else { closure(); return }  // fast pre-lock check
         lock.sync {
             if isCancelling {
                 closure()
@@ -39,7 +35,7 @@ public final class CancellationTokenSource {
 
     /// Communicates a request for cancellation to the managed token.
     public func cancel() {
-        if isCancelling { return } // fast pre-lock check
+        guard !isCancelling else { return } // fast pre-lock check
         lock.sync {
             if !isCancelling {
                 isCancelling = true
@@ -71,5 +67,5 @@ public struct CancellationToken {
     /// and synchronously.
     /// - warning: Make sure that you don't capture token inside a closure to
     /// avoid retain cycles.
-    public func register(closure: @escaping (Void) -> Void) { source.register(closure) }
+    public func register(closure: @escaping () -> Void) { source.register(closure) }
 }

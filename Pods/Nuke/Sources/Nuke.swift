@@ -1,92 +1,60 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2016 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2017 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
 #if os(macOS)
     import AppKit.NSImage
-    /// Alias for NSImage
+    /// Alias for `NSImage`.
     public typealias Image = NSImage
 #else
     import UIKit.UIImage
-    /// Alias for UIImage
+    /// Alias for `UIImage`.
     public typealias Image = UIImage
 #endif
 
-/// Loads an image into the given target.
-///
-/// For more info see `loadImage(with:into:)` method of `Manager`.
+
+/// An enum representing either a success with a result value, or a failure.
+public enum Result<T> {
+    case success(T), failure(Error)
+
+    /// Returns a `value` if the result is success.
+    public var value: T? {
+        if case let .success(val) = self { return val } else { return nil }
+    }
+
+    /// Returns an `error` if the result is failure.
+    public var error: Error? {
+        if case let .failure(err) = self { return err } else { return nil }
+    }
+}
+
+
+// MARK: - Deprecated
+
+@available(*, deprecated, message: "loadImage(with:into:) is deprecated. Use Manager.shared.loadImage(with:into:) instead.")
 public func loadImage(with url: URL, into target: Target) {
     Manager.shared.loadImage(with: url, into: target)
 }
 
-/// Loads an image into the given target.
-///
-/// For more info see `loadImage(with:into:)` method of `Manager`.
+@available(*, deprecated, message: "loadImage(with:into:) is deprecated. Use Manager.shared.loadImage(with:into:) instead.")
 public func loadImage(with request: Request, into target: Target) {
     Manager.shared.loadImage(with: request, into: target)
 }
 
-/// Loads an image and calls the given `handler`.
-///
-/// For more info see `loadImage(with:into:handler:)` method of `Manager`.
+@available(*, deprecated, message: "loadImage(with:into:handler:) is deprecated. Use Manager.shared.loadImage(with:into:handler:) instead.")
 public func loadImage(with url: URL, into target: AnyObject, handler: @escaping Manager.Handler) {
     Manager.shared.loadImage(with: url, into: target, handler: handler)
 }
 
-/// Loads an image and calls the given `handler`.
-///
-/// For more info see `loadImage(with:into:handler:)` method of `Manager`.
+@available(*, deprecated, message: "loadImage(with:into:handler:) is deprecated. Use Manager.shared.loadImage(with:into:handler:) instead.")
 public func loadImage(with request: Request, into target: AnyObject, handler: @escaping Manager.Handler) {
     Manager.shared.loadImage(with: request, into: target, handler: handler)
 }
 
 /// Cancels an outstanding request associated with the target.
+@available(*, deprecated, message: "cancelRequest(for:) is deprecated. Use Manager.shared.cancelRequest(for:) instead.")
 public func cancelRequest(for target: AnyObject) {
     Manager.shared.cancelRequest(for: target)
-}
-
-public extension Manager {
-    /// Shared `Manager` instance.
-    ///
-    /// Shared manager is created with `Loader.shared` and `Cache.shared`.
-    public static var shared = Manager(loader: Loader.shared, cache: Cache.shared)
-}
-
-public extension Loader {
-    /// Shared `Loading` object.
-    ///
-    /// Shared loader is created with `DataLoader()`, `DataDecoder()` and
-    // `Cache.shared`. The resulting loader is wrapped in a `Deduplicator`.
-    public static var shared: Loading = Deduplicator(loader: Loader(loader: DataLoader(), decoder: DataDecoder(), cache: Cache.shared))
-}
-
-public extension Cache {
-    /// Shared `Cache` instance.
-    public static var shared = Cache()
-}
-
-internal final class Lock {
-    var mutex = UnsafeMutablePointer<pthread_mutex_t>.allocate(capacity: 1)
-    
-    init() {
-        pthread_mutex_init(mutex, nil)
-    }
-    
-    deinit {
-        pthread_mutex_destroy(mutex)
-        mutex.deinitialize()
-        mutex.deallocate(capacity: 1)
-    }
-    
-    /// In critical places it's better to use lock() and unlock() manually
-    func sync<T>(_ closure: (Void) -> T) -> T {
-        pthread_mutex_lock(mutex)
-        defer { pthread_mutex_unlock(mutex) }
-        return closure()
-    }
-    
-    func lock() { pthread_mutex_lock(mutex) }
-    func unlock() { pthread_mutex_unlock(mutex) }
 }
