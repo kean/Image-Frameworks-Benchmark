@@ -39,22 +39,22 @@ class PerformanceTests: XCTestCase {
 //                }
 //            }
 //         }
-////
-//    func testNuke() {
-//        measure {
-//            for url in self.urls {
-//                Nuke.Manager.shared.loadImage(with: url, into: self.view)
-//            }
-//        }
-//    }
-//
-    func testKingfisher() {
+
+    func testNuke() {
         measure {
             for url in self.urls {
-                self.view.kf.setImage(with: url)
+                Nuke.Manager.shared.loadImage(with: url, into: self.view)
             }
         }
     }
+//
+//    func testKingfisher() {
+//        measure {
+//            for url in self.urls {
+//                self.view.kf.setImage(with: url)
+//            }
+//        }
+//    }
 //    func testSDWebImage() {
 //        measure {
 //            for url in self.urls {
