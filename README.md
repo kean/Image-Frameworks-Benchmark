@@ -20,4 +20,4 @@ view.af_setImage(withURL: url)
 
 The results (higher is better):
 
-<img src="https://user-images.githubusercontent.com/1567433/33290122-c7a300aa-d3d2-11e7-98f0-2efa0425a462.png" width="800"/>
+<img src="https://user-images.githubusercontent.com/1567433/34080746-01bdf4b2-e354-11e7-8042-a495f9082c0c.png" width="800"/>
