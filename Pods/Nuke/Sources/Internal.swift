@@ -17,8 +17,6 @@ internal final class Lock {
         mutex.deallocate(capacity: 1)
     }
 
-    // In performance critical places using lock() and unlock() is slightly
-    // faster than using `sync(_:)` method.
     func sync<T>(_ closure: () -> T) -> T {
         pthread_mutex_lock(mutex)
         defer { pthread_mutex_unlock(mutex) }
@@ -26,6 +24,7 @@ internal final class Lock {
     }
 
     func lock() { pthread_mutex_lock(mutex) }
+
     func unlock() { pthread_mutex_unlock(mutex) }
 }
 
@@ -172,10 +171,11 @@ internal final class TaskQueue {
     private func _executeTask(_ task: Task) {
         guard !task.token.isCancelling else { return } // check if still not cancelled
         executingTaskCount += 1
+        var isFinished = false
         task.execute { [weak self] in
             self?.queue.async {
-                guard !task.isFinished else { return } // finish called twice
-                task.isFinished = true
+                guard !isFinished else { return } // finish called twice
+                isFinished = true
                 self?.executingTaskCount -= 1
                 self?._executeTasksIfNecessary()
             }
@@ -185,7 +185,6 @@ internal final class TaskQueue {
     private final class Task {
         let token: CancellationToken
         let execute: (_ finish: @escaping () -> Void) -> Void
-        var isFinished: Bool = false
 
         init(token: CancellationToken, execute: @escaping (_ finish: @escaping () -> Void) -> Void) {
             self.token = token
@@ -196,7 +195,7 @@ internal final class TaskQueue {
 
 // MARK: - LinkedList
 
-/// Basic doubly linked list.
+// Basic doubly linked list.
 internal final class LinkedList<V> {
     // head <-> node <-> ... <-> tail
     private(set) var head: Node?
@@ -226,21 +225,21 @@ internal final class LinkedList<V> {
     }
 
     func removeAll() {
-        // Here's a clever trick to avoid recursive Nodes deallocation
-        var node = tail
-        while let previous = node?.previous {
-            previous.next = nil
-            node = previous
+        // avoid recursive Nodes deallocation
+        var node = head
+        while let next = node?.next {
+            node?.next = nil
+            next.previous = nil
+            node = next
         }
-
         head = nil
         tail = nil
     }
 
     final class Node {
         let value: V
-        var next: Node?
-        weak var previous: Node?
+        fileprivate var next: Node?
+        fileprivate var previous: Node?
 
         init(value: V) { self.value = value }
     }

@@ -30,7 +30,7 @@ public struct ProcessorComposition: Processing {
 
     /// Returns true if the underlying processors are pairwise-equivalent.
     public static func ==(lhs: ProcessorComposition, rhs: ProcessorComposition) -> Bool {
-        return lhs.processors.elementsEqual(rhs.processors)
+        return lhs.processors == rhs.processors
     }
 }
 
@@ -64,7 +64,7 @@ public struct AnyProcessor: Processing {
     ///
     /// Decompressing compressed image formats (such as JPEG) can significantly
     /// improve drawing performance as it allows a bitmap representation to be
-    /// created in the background rather than on the main thread.
+    /// created in a background rather than on the main thread.
     public struct Decompressor: Processing {
 
         /// An option for how to resize the image.

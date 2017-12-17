@@ -4,7 +4,7 @@ PODS:
     - Alamofire (~> 4.5)
   - FLAnimatedImage (1.0.12)
   - Kingfisher (4.3.1)
-  - Nuke (6.0-beta1)
+  - Nuke (6.0-beta2)
   - PINCache (2.3)
   - PINRemoteImage (2.1.4):
     - PINRemoteImage/FLAnimatedImage (= 2.1.4)
@@ -31,7 +31,7 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   Nuke:
-    :commit: 9e9969d54f77275c3d5959ac6d104c0f301a1775
+    :commit: 7a7f76e5b5173845d7432d1949cb8260736ef2cf
     :git: https://github.com/kean/Nuke.git
 
 SPEC CHECKSUMS:
@@ -39,7 +39,7 @@ SPEC CHECKSUMS:
   AlamofireImage: 2e784dc5d00f04903a52c1d169181469c805c3df
   FLAnimatedImage: 4a0b56255d9b05f18b6dd7ee06871be5d3b89e31
   Kingfisher: 75541c4b62f02e1fde6f9772303de3d9ebe8f5b3
-  Nuke: cf7460e38432ae2e30c9582d1384ce2d25e89f39
+  Nuke: 0e482591b41201c6547dc067007e8842dbda714a
   PINCache: ce36ed282031b92fc7733ffe831f474ff80fddc2
   PINRemoteImage: 4ac4011c5caefd6befd99758e09becede05d3226
   SDWebImage: 89a9d32cd520bbb46eb14e541d5109b3564af198

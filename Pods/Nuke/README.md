@@ -13,7 +13,7 @@ A powerful **image loading** and **caching** framework which allows for hassle-f
 
 - Load images into image views and other targets
 - Two [cache layers](https://kean.github.io/post/image-caching), fast LRU memory cache
-- [Alamofire](https://github.com/kean/Nuke-Alamofire-Plugin), [Gifu](https://github.com/kean/Nuke-Gifu-Plugin) plugins
+- [Alamofire](https://github.com/kean/Nuke-Alamofire-Plugin), [Gifu](https://github.com/kean/Nuke-Gifu-Plugin) extensions
 - [Freedom to use](#h_design) networking, caching libraries of your choice
 - [RxSwift](https://github.com/ReactiveX/RxSwift) extensions provided by [RxNuke](https://github.com/kean/RxNuke)
 - Automated [prefetching](https://kean.github.io/post/image-preheating) with [Preheat](https://github.com/kean/Preheat) library
@@ -191,32 +191,20 @@ You can use Nuke in combination with [Preheat](https://github.com/kean/Preheat) 
 > See [Performance Guide](https://github.com/kean/Nuke/blob/master/Documentation/Guides/Performance%20Guide.md) to see what else you can do to improve performance
 
 
-# Plugins<a name="h_plugins"></a>
+# Extensions<a name="h_plugins"></a>
 
-### [RxNuke](https://github.com/kean/RxNuke)
-
-[RxSwift](https://github.com/ReactiveX/RxSwift) extensions for Nuke with an examples of common use cases solved by Rx.
-
-### [Alamofire Plugin](https://github.com/kean/Nuke-Alamofire-Plugin)
-
-Allows you to replace networking layer with [Alamofire](https://github.com/Alamofire/Alamofire). Combine the power of both frameworks!
-
-### [Gifu Plugin](https://github.com/kean/Nuke-Gifu-Plugin)
-
-[Gifu](https://github.com/kaishin/Gifu) plugin allows you to load and display animated GIFs.
-
-### [Toucan Plugin](https://github.com/kean/Nuke-Toucan-Plugin) (Deprecated)
-
-[Toucan](https://github.com/gavinbunney/Toucan) plugin provides a simple API for processing images. It supports resizing, cropping, rounded rect masking and more.
-
-### [FLAnimatedImage Plugin](https://github.com/kean/Nuke-AnimatedImage-Plugin) (Deprecated)
-
-[FLAnimatedImage](https://github.com/Flipboard/FLAnimatedImage) plugin allows you to load and display animated GIFs with [smooth scrolling performance](https://www.youtube.com/watch?v=fEJqQMJrET4) and low memory footprint.
+|Name|Description|
+|--|--|
+|[**RxNuke**](https://github.com/kean/RxNuke)|[RxSwift](https://github.com/ReactiveX/RxSwift) extensions for Nuke with examples of common use cases solved by Rx|
+|[**Alamofire**](https://github.com/kean/Nuke-Alamofire-Plugin)|Replace networking layer with [Alamofire](https://github.com/Alamofire/Alamofire) and combine the power of both frameworks|
+|[**Gifu**](https://github.com/kean/Nuke-Gifu-Plugin)|Use [Gifu](https://github.com/kaishin/Gifu) to load and display animated GIFs|
+|[**Toucan**](https://github.com/kean/Nuke-Toucan-Plugin)|**(Deprecated)** [Toucan](https://github.com/gavinbunney/Toucan) offers a simple API for processing images|
+|[**FLAnimatedImage**](https://github.com/kean/Nuke-AnimatedImage-Plugin)|**(Deprecated)** Use [FLAnimatedImage](https://github.com/Flipboard/FLAnimatedImage) to load and display [animated GIFs]((https://www.youtube.com/watch?v=fEJqQMJrET4))|
 
 
 # Design<a name="h_design"></a>
 
-Nuke is designed to support [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection). It provides a set of protocols - each with a single responsibility - which manage loading, decoding, processing, and caching images. You can easily create and inject your own implementations of those protocols:
+Nuke is designed to support [dependency injection](https://en.wikipedia.org/wiki/Dependency_injection). It provides a set of protocols - each with a single responsibility - which manage loading, decoding, processing, and caching images. You can easily create and inject your own implementations of the following protocols:
 
 |Protocol|Description|
 |--------|-----------|
@@ -228,21 +216,19 @@ Nuke is designed to support [dependency injection](https://en.wikipedia.org/wiki
 
 ### Data Loading and Caching
 
-Nuke has a basic built-in `DataLoader` class that implements `DataLoading` protocol. It uses [`Foundation.URLSession`](https://developer.apple.com/reference/foundation/nsurlsession) which is a part of the Foundation's [URL Loading System](https://developer.apple.com/library/content/documentation/Cocoa/Conceptual/URLLoadingSystem/URLLoadingSystem.html). Another part of it is [`Foundation.URLCache`](https://developer.apple.com/reference/foundation/urlcache) which provides a composite in-memory and on-disk cache for data. By default it is initialized with a memory capacity of 0 MB (Nuke only stores decompressed images in memory) and a disk capacity of 150 MB.
+A built-in `DataLoader` class implements `DataLoading` protocol and uses [`Foundation.URLSession`](https://developer.apple.com/reference/foundation/nsurlsession) to load image data. The data is cached on disk using a [`Foundation.URLCache`](https://developer.apple.com/reference/foundation/urlcache) instance which by default is initialized with a memory capacity of 0 MB (Nuke stores images in memory, not image data) and a disk capacity of 150 MB.
 
-> See [Image Caching Guide](https://kean.github.io/post/image-caching) to learn more about URLCache, HTTP caching, and more
+> See [Image Caching Guide](https://kean.github.io/post/image-caching) to learn more about image caching
 
-> If you'd like to use a third-party caching library check out [Third Party Libraries: Using Other Caching Libraries](https://github.com/kean/Nuke/blob/master/Documentation/Guides/Third%20Party%20Libraries.md#using-other-caching-libraries)
+> See [Third Party Libraries](https://github.com/kean/Nuke/blob/master/Documentation/Guides/Third%20Party%20Libraries.md#using-other-caching-libraries) guide to learn about how to use a custom data loader or cache
 
-Most developers either have their own networking layer, or use some third-party framework. Nuke supports both of these workflows. You can integrate a custom networking layer by implementing `DataLoading` protocol.
+Most developers either implement their own networking layer or use a third-party framework. Nuke supports both of those workflows. You can integrate your custom networking layer by implementing `DataLoading` protocol.
 
 > See [Alamofire Plugin](https://github.com/kean/Nuke-Alamofire-Plugin) that implements `DataLoading` protocol using [Alamofire](https://github.com/Alamofire/Alamofire) framework
 
-> If you'd like to use your own network layer see [Third Party Libraries: Using Other Networking Libraries](https://github.com/kean/Nuke/blob/master/Documentation/Guides/Third%20Party%20Libraries.md#using-other-networking-libraries)
-
 ### Memory Cache
 
-Nuke provides a fast in-memory `Cache` that implements `Caching` protocol. It stores processed images ready to be displayed. `Cache` uses [LRU (least-recently used)](https://en.wikipedia.org/wiki/Cache_algorithms#Examples) replacement algorithm. By default it is initialized with a memory capacity of 20% of the available RAM. As a good citizen `Cache` automatically evicts images on memory warnings, and removes most of the images when application enters background.
+Nuke provides a fast in-memory `Cache` class which is used to store processed images ready to be displayed. `Cache` uses [LRU (least recently used)](https://en.wikipedia.org/wiki/Cache_algorithms#Examples) replacement algorithm. It has a limit which prevents it from using more than ~20% of available RAM. As a good citizen `Cache` automatically evicts images on memory warnings and removes most of the images when the application enters background.
 
 # Requirements<a name="h_requirements"></a>
 

@@ -8,7 +8,6 @@ import Foundation
 public final class Manager: Loading {
     public let loader: Loading
     public let cache: Caching?
-    private let lock = Lock()
 
     /// Shared `Manager` instance.
     ///
@@ -62,7 +61,7 @@ public final class Manager: Loading {
         }
 
         // Create context and associate it with a target
-        let cts = CancellationTokenSource(lock: lock)
+        let cts = CancellationTokenSource()
         let context = Context(cts)
         Manager.setContext(context, for: target)
 
@@ -89,6 +88,8 @@ public final class Manager: Loading {
     /// Loads an image with a given request by using manager's cache and loader.
     ///
     /// - parameter completion: Gets called asynchronously on the main thread.
+    /// If the request is cancelled the completion closure isn't guaranteed to
+    /// be called.
     public func loadImage(with request: Request, token: CancellationToken?, completion: @escaping (Result<Image>) -> Void) {
         // Check if image is in memory cache
         if let image = cachedImage(for: request) {
