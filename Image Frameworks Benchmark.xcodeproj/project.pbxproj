@@ -177,7 +177,6 @@
 					};
 					0C6A937A1D9FEB0900290284 = {
 						CreatedOnToolsVersion = 8.0;
-						DevelopmentTeam = 2MGJ28AV6C;
 						ProvisioningStyle = Automatic;
 						TestTargetID = 0C6A93531D9FEAA900290284;
 					};
@@ -460,7 +459,7 @@
 			baseConfigurationReference = 1D573B0E45C486C2AD9C7385 /* Pods-Benchmark.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = 2MGJ28AV6C;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = Benchmark/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.github.kean.Benchmark;
@@ -475,7 +474,7 @@
 			baseConfigurationReference = E70C30223E3FCA40CC462A99 /* Pods-Benchmark.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
-				DEVELOPMENT_TEAM = 2MGJ28AV6C;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = Benchmark/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = com.github.kean.Benchmark;

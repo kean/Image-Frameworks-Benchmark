@@ -15,13 +15,16 @@ import Foundation
 public protocol Caching: class {
     /// Accesses the image associated with the given key.
     subscript(key: AnyHashable) -> Image? { get set }
+
+    // unfortunately there is a lot of extra work happening here because key
+    // types are not statically defined, might be worth rethinking cache
 }
 
 public extension Caching {
     /// Accesses the image associated with the given request.
     public subscript(request: Request) -> Image? {
-        get { return self[Request.cacheKey(for: request)] }
-        set { self[Request.cacheKey(for: request)] = newValue }
+        get { return self[request.cacheKey] }
+        set { self[request.cacheKey] = newValue }
     }
 }
 
@@ -43,10 +46,10 @@ public final class Cache: Caching {
     private let lock = Lock()
 
     /// The maximum total cost that the cache can hold.
-    public var costLimit: Int { didSet { lock.sync { _trim() } } }
+    public var costLimit: Int { didSet { lock.sync(_trim) } }
 
     /// The maximum number of items that the cache can hold.
-    public var countLimit: Int { didSet { lock.sync { _trim() } } }
+    public var countLimit: Int { didSet { lock.sync(_trim) } }
 
     /// The total cost of items in the cache.
     public private(set) var totalCost = 0
@@ -80,7 +83,7 @@ public final class Cache: Caching {
     /// of the phisical memory available on the device.
     public static func defaultCostLimit() -> Int {
         let physicalMemory = ProcessInfo.processInfo.physicalMemory
-        let ratio = physicalMemory <= (1024 * 1024 * 512 /* 512 Mb */) ? 0.1 : 0.2
+        let ratio = physicalMemory <= (536_870_912 /* 512 Mb */) ? 0.1 : 0.2
         let limit = physicalMemory / UInt64(1 / ratio)
         return limit > UInt64(Int.max) ? Int.max : Int(limit)
     }
@@ -88,24 +91,21 @@ public final class Cache: Caching {
     /// Accesses the image associated with the given key.
     public subscript(key: AnyHashable) -> Image? {
         get {
-            lock.lock()  // slightly aster than `sync()`
-            defer { lock.unlock() }
+            lock.lock(); defer { lock.unlock() } // slightly faster than `sync()`
 
             guard let node = map[key] else { return nil }
 
-            // bubble node up to the head
+            // bubble node up to make it last added (most recently used)
             list.remove(node)
             list.append(node)
 
             return node.value.image
         }
         set {
-            lock.lock() // slightly faster than `sync()`
-            defer { lock.unlock() }
+            lock.lock(); defer { lock.unlock() } // slightly faster than `sync()`
 
             if let image = newValue {
-                let value = CachedImage(image: image, cost: cost(image), key: key)
-                _add(node: LinkedList.Node(value: value))
+                _add(CachedImage(image: image, cost: cost(image), key: key))
                 _trim() // _trim is extremely fast, it's OK to call it each time
             } else {
                 guard let node = map[key] else { return }
@@ -114,13 +114,12 @@ public final class Cache: Caching {
         }
     }
 
-    private func _add(node: LinkedList<CachedImage>.Node) {
-        if let existingNode = map[node.value.key] {
+    private func _add(_ element: CachedImage) {
+        if let existingNode = map[element.key] {
             _remove(node: existingNode)
         }
-        list.append(node)
-        map[node.value.key] = node
-        totalCost += node.value.cost
+        map[element.key] = list.append(element)
+        totalCost += element.cost
     }
 
     private func _remove(node: LinkedList<CachedImage>.Node) {
@@ -175,7 +174,7 @@ public final class Cache: Caching {
     }
 
     private func _trim(while condition: () -> Bool) {
-        while condition(), let node = list.tail { // least recently used
+        while condition(), let node = list.first { // least recently used
             _remove(node: node)
         }
     }

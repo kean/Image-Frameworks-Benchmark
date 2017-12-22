@@ -23,8 +23,8 @@ public struct ProcessorComposition: Processing {
     /// which they were added. If one of the processors fails to produce
     /// an image the processing stops and `nil` is returned.
     public func process(_ input: Image) -> Image? {
-        return processors.reduce(input as Image!) { image, processor in
-            return autoreleasepool { image != nil ? processor.process(image!) : nil }
+        return processors.reduce(input) { image, processor in
+            return autoreleasepool { image.flatMap(processor.process) }
         }
     }
 
@@ -52,6 +52,23 @@ public struct AnyProcessor: Processing {
 
     public static func ==(lhs: AnyProcessor, rhs: AnyProcessor) -> Bool {
         return lhs._equals(rhs)
+    }
+}
+
+internal struct AnonymousProcessor: Processing {
+    private let _key: AnyHashable
+    private let _closure: (Image) -> Image?
+
+    init<Key: Hashable>(_ key: Key, _ closure: @escaping (Image) -> Image?) {
+        self._key = key; self._closure = closure
+    }
+
+    func process(_ image: Image) -> Image? {
+        return self._closure(image)
+    }
+
+    static func ==(lhs: AnonymousProcessor, rhs: AnonymousProcessor) -> Bool {
+        return lhs._key == rhs._key
     }
 }
 

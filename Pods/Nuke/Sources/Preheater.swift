@@ -36,7 +36,7 @@ public final class Preheater {
     }
 
     private func _startPreheating(with request: Request) {
-        let key = Request.loadKey(for: request)
+        let key = request.loadKey
         guard tasks[key] == nil else { return } // already exists
 
         let task = Task(request: request, key: key)
@@ -46,7 +46,7 @@ public final class Preheater {
                 self?._remove(task)
                 finish()
             }
-            token.register { finish() }
+            token.register(finish)
         }
         tasks[key] = task
     }
@@ -65,7 +65,7 @@ public final class Preheater {
     }
 
     private func _stopPreheating(with request: Request) {
-        if let task = tasks[Request.loadKey(for: request)] {
+        if let task = tasks[request.loadKey] {
             tasks[task.key] = nil
             task.cts.cancel()
         }

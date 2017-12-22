@@ -28,17 +28,6 @@ internal final class Lock {
     func unlock() { pthread_mutex_unlock(mutex) }
 }
 
-// MARK: - Extensions
-
-internal extension DispatchQueue {
-    func execute(token: CancellationToken, closure: @escaping () -> Void) {
-        guard !token.isCancelling else { return } // fast preflight check
-        let work = DispatchWorkItem(block: closure)
-        async(execute: work)
-        token.register { [weak work] in work?.cancel() }
-    }
-}
-
 // MARK: - RateLimiter
 
 /// Controls the rate at which the work is executed. Uses the classic [token
@@ -53,50 +42,47 @@ internal extension DispatchQueue {
 internal final class RateLimiter {
     private let bucket: TokenBucket
     private let queue = DispatchQueue(label: "com.github.kean.Nuke.RateLimiter")
-    private var pendingItems = [Item]()
-    private var isExecutingPendingItems = false
+    private var pending = LinkedList<Task>() // fast append, fast remove first
+    private var isExecutingPendingTasks = false
 
-    private typealias Item = (CancellationToken, () -> Void)
+    private typealias Task = (CancellationToken, () -> Void)
 
     /// Initializes the `RateLimiter` with the given configuration.
-    /// - parameter rate: Maximum number of requests per second. 45 by default.
+    /// - parameter rate: Maximum number of requests per second. 100 by default.
     /// - parameter burst: Maximum number of requests which can be executed without
-    /// any delays when "bucket is full". 15 by default.
-    internal init(rate: Int = 45, burst: Int = 15) {
+    /// any delays when "bucket is full". 30 by default.
+    internal init(rate: Int = 100, burst: Int = 30) {
         self.bucket = TokenBucket(rate: Double(rate), burst: Double(burst))
     }
 
-    internal func execute(token: CancellationToken, closure: @escaping () -> Void) {
-        guard !token.isCancelling else { return } // fast preflight check
+    internal func execute(token: CancellationToken, _ closure: @escaping () -> Void) {
         queue.sync {
-            let item = Item(token, closure)
-            if !pendingItems.isEmpty || !_execute(item) {
-                pendingItems.insert(item, at: 0)
-                _setNeedsExecutePendingItems()
+            let task = Task(token, closure)
+            if !pending.isEmpty || !_execute(task) {
+                pending.append(task)
+                _setNeedsExecutePendingTasks()
             }
         }
     }
 
-    private func _execute(_ item: Item) -> Bool {
-        guard !item.0.isCancelling else { return true } // no need to execute
-        return bucket.execute { item.1() }
+    private func _execute(_ task: Task) -> Bool {
+        guard !task.0.isCancelling else { return true } // no need to execute
+        return bucket.execute(task.1)
     }
 
-    private func _setNeedsExecutePendingItems() {
-        guard !isExecutingPendingItems else { return }
-        isExecutingPendingItems = true
-        queue.asyncAfter(deadline: .now() + 0.05) { [weak self] in
-            self?._executePendingItems()
-        }
+    private func _setNeedsExecutePendingTasks() {
+        guard !isExecutingPendingTasks else { return }
+        isExecutingPendingTasks = true
+        queue.asyncAfter(deadline: .now() + 0.05, execute: _executePendingTasks)
     }
 
-    private func _executePendingItems() {
-        while let item = pendingItems.last, _execute(item) {
-            pendingItems.removeLast()
+    private func _executePendingTasks() {
+        while let node = pending.first, _execute(node.value) {
+            pending.remove(node)
         }
-        isExecutingPendingItems = false
-        if !pendingItems.isEmpty { // not all pending items were executed
-            _setNeedsExecutePendingItems()
+        isExecutingPendingTasks = false
+        if !pending.isEmpty { // not all pending items were executed
+            _setNeedsExecutePendingTasks()
         }
     }
 
@@ -108,7 +94,7 @@ internal final class RateLimiter {
 
         /// - parameter rate: Rate (tokens/second) at which bucket is refilled.
         /// - parameter burst: Bucket size (maximum number of tokens).
-        init(rate: Double = 30.0, burst: Double = 15.0) {
+        init(rate: Double, burst: Double) {
             self.rate = rate
             self.burst = burst
             self.bucket = burst
@@ -116,7 +102,7 @@ internal final class RateLimiter {
         }
 
         /// Returns `true` if the closure was executed, `false` if dropped.
-        func execute(closure: () -> Void) -> Bool {
+        func execute(_ closure: () -> Void) -> Bool {
             refill()
             guard bucket >= 1.0 else {
                 return false // bucket is empty
@@ -139,41 +125,47 @@ internal final class RateLimiter {
 
 // MARK: - TaskQueue
 
-/// Limits number of maximum concurrent tasks.
+/// Limits number of maximum concurrent tasks. By default tasks are executed on
+/// the underlying concurrent dispatch queue (with default options).
 internal final class TaskQueue {
     // An alternative of using custom Foundation.Operation requires more code,
     // less performant and even harder to get right https://github.com/kean/Nuke/issues/141.
     private var executingTaskCount: Int = 0
-    private var pendingTasks = LinkedList<Task>()
+    private var pendingTasks = LinkedList<Task>() // fast append, fast remove first
     private let maxConcurrentTaskCount: Int
-    private let queue = DispatchQueue(label: "com.github.kean.Nuke.Queue")
+    private let executionQueue = DispatchQueue(label: "com.github.kean.Nuke.TaskQueue.Execution", attributes: .concurrent)
+    private let syncQueue = DispatchQueue(label: "com.github.kean.Nuke.TaskQueue.Sync")
+
+    internal typealias Work = (_ finish: @escaping () -> Void) -> Void
+    private typealias Task = (CancellationToken, Work)
 
     internal init(maxConcurrentTaskCount: Int) {
         self.maxConcurrentTaskCount = maxConcurrentTaskCount
     }
 
-    internal func execute(token: CancellationToken, closure: @escaping (_ finish: @escaping () -> Void) -> Void) {
-        queue.async {
+    internal func execute(token: CancellationToken, _ closure: @escaping Work) {
+        syncQueue.async {
             guard !token.isCancelling else { return } // fast preflight check
-            let task = Task(token: token, execute: closure)
-            self.pendingTasks.append(LinkedList.Node(value: task))
+            self.pendingTasks.append((token, closure))
             self._executeTasksIfNecessary()
         }
     }
 
     private func _executeTasksIfNecessary() {
-        while executingTaskCount < maxConcurrentTaskCount, let task = pendingTasks.tail {
-            pendingTasks.remove(task)
-            _executeTask(task.value)
+        while executingTaskCount < maxConcurrentTaskCount, let node = pendingTasks.first {
+            pendingTasks.remove(node)
+            let task = node.value
+            if !task.0.isCancelling { // check if still not cancelled
+                executingTaskCount += 1 // only then execute
+                executionQueue.async { self._executeTask(task) }
+            }
         }
     }
 
     private func _executeTask(_ task: Task) {
-        guard !task.token.isCancelling else { return } // check if still not cancelled
-        executingTaskCount += 1
         var isFinished = false
-        task.execute { [weak self] in
-            self?.queue.async {
+        task.1 { [weak self] in
+            self?.syncQueue.async {
                 guard !isFinished else { return } // finish called twice
                 isFinished = true
                 self?.executingTaskCount -= 1
@@ -181,94 +173,109 @@ internal final class TaskQueue {
             }
         }
     }
-
-    private final class Task {
-        let token: CancellationToken
-        let execute: (_ finish: @escaping () -> Void) -> Void
-
-        init(token: CancellationToken, execute: @escaping (_ finish: @escaping () -> Void) -> Void) {
-            self.token = token
-            self.execute = execute
-        }
-    }
 }
 
 // MARK: - LinkedList
 
-// Basic doubly linked list.
-internal final class LinkedList<T> {
-    // head <-> node <-> ... <-> tail
-    private(set) var head: Node?
-    private(set) var tail: Node?
+/// A doubly linked list.
+internal final class LinkedList<Element> {
+    // first <-> node <-> ... <-> last
+    private(set) var first: Node?
+    private(set) var last: Node?
 
-    deinit { removeAll() }
+    deinit { removeAll() } // only available on classes
 
-    /// Appends node to the head.
+    var isEmpty: Bool { return last == nil }
+
+    /// Adds an element to the end of the list.
+    @discardableResult func append(_ element: Element) -> Node {
+        let node = Node(value: element)
+        append(node)
+        return node
+    }
+
+    /// Adds a node to the end of the list.
     func append(_ node: Node) {
-        if let currentHead = head {
-            head = node
-            currentHead.previous = node
-            node.next = currentHead
+        if let last = last {
+            last.next = node
+            node.previous = last
+            self.last = node
         } else {
-            head = node
-            tail = node
+            last = node
+            first = node
         }
     }
 
     func remove(_ node: Node) {
-        node.next?.previous = node.previous // node.previous is nil if node=head
-        node.previous?.next = node.next // node.next is nil if node=tail
-        if node === head { head = node.next }
-        if node === tail { tail = node.previous }
+        node.next?.previous = node.previous // node.previous is nil if node=first
+        node.previous?.next = node.next // node.next is nil if node=last
+        if node === last { last = node.previous }
+        if node === first { first = node.next }
         node.next = nil
         node.previous = nil
     }
 
     func removeAll() {
         // avoid recursive Nodes deallocation
-        var node = head
+        var node = first
         while let next = node?.next {
             node?.next = nil
             next.previous = nil
             node = next
         }
-        head = nil
-        tail = nil
+        last = nil
+        first = nil
     }
 
     final class Node {
-        let value: T
+        let value: Element
         fileprivate var next: Node?
         fileprivate var previous: Node?
 
-        init(value: T) { self.value = value }
+        init(value: Element) { self.value = value }
     }
 }
 
 // MARK: - Bag
 
-/// Lightweight data structure for suitable for storing small number of elements.
-internal struct Bag<T> {
-    private var head: Node?
+/// Lightweight unordered data structure for storing a small number of elements.
+/// The idea is that it doesn't allocate any space on heap during initialization
+/// and it inlines first couple of elements and only then falls back to array
+/// (`ContiguousArray`) backed storage.
+///
+/// The name `Bag` (`Multiset`) is actually taken and it means something
+/// different than what this type does. But since it's an internal type it
+/// should work for now.
+internal struct Bag<Element>: Sequence {
+    private var first: Element? // inline first couple of elements
+    private var second: Element?
+    // ~20% faster than Array based on perf tests
+    private var remaining: ContiguousArray<Element>?
 
-    private final class Node {
-        let value: T
-        var next: Node?
-        init(_ value: T, next: Node? = nil ) {
-            self.value = value; self.next = next
+    mutating func insert(_ value: Element) {
+        guard first != nil else { first = value; return } // inline first
+        guard second != nil else { second = value; return } // inline second
+        if remaining == nil { remaining = ContiguousArray<Element>() } // create lazily
+        remaining!.append(value)
+    }
+
+    // MARK: Sequence
+
+    internal struct BagIterator: IteratorProtocol {
+        private var index = 0
+        private var bag: Bag
+        init(_ bag: Bag) { self.bag = bag }
+
+        mutating func next() -> Element? {
+            defer { index += 1 }
+            if index == 0 { return bag.first }
+            if index == 1 { return bag.second }
+            guard let remaining = bag.remaining, index - 2 < remaining.endIndex else { return nil }
+            return remaining[index - 2]
         }
     }
 
-    mutating func insert(_ value: T) {
-        guard let node = head else { self.head = Node(value); return }
-        self.head = Node(value, next: node)
-    }
-
-    func forEach(_ closure: (T) -> Void) {
-        var node = self.head
-        while node != nil {
-            closure(node!.value)
-            node = node?.next
-        }
+    func makeIterator() -> BagIterator {
+        return BagIterator(self)
     }
 }
