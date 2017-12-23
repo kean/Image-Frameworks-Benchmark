@@ -21,3 +21,5 @@ view.af_setImage(withURL: url)
 The results (higher is better):
 
 <img src="https://user-images.githubusercontent.com/1567433/34312349-7b2b0bf4-e774-11e7-891d-a5f056874ff5.png" width="800"/>
+
+Please keep in mind that this performance test makes for a very nice looking chart, but in practice, the difference between Nuke and say SDWebImage is not going to be that dramatic. Unless you app drops frames on a table or a collection view rendering, there is no real reason to switch.
