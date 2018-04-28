@@ -1,31 +1,16 @@
 // The MIT License (MIT)
 //
-// Copyright (c) 2017 Alexander Grebenyuk (github.com/kean).
+// Copyright (c) 2015-2018 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
 
 // MARK: - Lock
 
-internal final class Lock {
-    var mutex = UnsafeMutablePointer<pthread_mutex_t>.allocate(capacity: 1)
-
-    init() { pthread_mutex_init(mutex, nil) }
-
-    deinit {
-        pthread_mutex_destroy(mutex)
-        mutex.deinitialize()
-        mutex.deallocate(capacity: 1)
-    }
-
+extension NSLock {
     func sync<T>(_ closure: () -> T) -> T {
-        pthread_mutex_lock(mutex)
-        defer { pthread_mutex_unlock(mutex) }
+        lock(); defer { unlock() }
         return closure()
     }
-
-    func lock() { pthread_mutex_lock(mutex) }
-
-    func unlock() { pthread_mutex_unlock(mutex) }
 }
 
 // MARK: - RateLimiter
@@ -41,39 +26,46 @@ internal final class Lock {
 /// rate limiter from affecting "normal" requests flow.
 internal final class RateLimiter {
     private let bucket: TokenBucket
-    private let queue = DispatchQueue(label: "com.github.kean.Nuke.RateLimiter")
+    private let queue: DispatchQueue
     private var pending = LinkedList<Task>() // fast append, fast remove first
     private var isExecutingPendingTasks = false
 
-    private typealias Task = (CancellationToken, () -> Void)
+    private typealias Task = (_CancellationToken, () -> Void)
 
     /// Initializes the `RateLimiter` with the given configuration.
-    /// - parameter rate: Maximum number of requests per second. 100 by default.
+    /// - parameter queue: Queue on which to execute pending tasks.
+    /// - parameter rate: Maximum number of requests per second. 80 by default.
     /// - parameter burst: Maximum number of requests which can be executed without
-    /// any delays when "bucket is full". 30 by default.
-    internal init(rate: Int = 100, burst: Int = 30) {
+    /// any delays when "bucket is full". 25 by default.
+    init(queue: DispatchQueue, rate: Int = 80, burst: Int = 25) {
+        self.queue = queue
         self.bucket = TokenBucket(rate: Double(rate), burst: Double(burst))
     }
 
-    internal func execute(token: CancellationToken, _ closure: @escaping () -> Void) {
-        queue.sync {
-            let task = Task(token, closure)
-            if !pending.isEmpty || !_execute(task) {
-                pending.append(task)
-                _setNeedsExecutePendingTasks()
-            }
+    func execute(token: _CancellationToken, _ closure: @escaping () -> Void) {
+        let task = Task(token, closure)
+        if !pending.isEmpty || !_execute(task) {
+            pending.append(task)
+            _setNeedsExecutePendingTasks()
         }
     }
 
     private func _execute(_ task: Task) -> Bool {
-        guard !task.0.isCancelling else { return true } // no need to execute
+        guard !task.0.isCancelling else {
+            return true // No need to execute
+        }
         return bucket.execute(task.1)
     }
 
     private func _setNeedsExecutePendingTasks() {
         guard !isExecutingPendingTasks else { return }
         isExecutingPendingTasks = true
-        queue.asyncAfter(deadline: .now() + 0.05, execute: _executePendingTasks)
+        // Compute a delay such that by the time the closure is executed the
+        // bucket is refilled to a point that is able to execute at least one
+        // pending task. With a rate of 100 tasks we expect a refill every 10 ms.
+        let delay = Int(1.15 * (1000 / bucket.rate)) // 14 ms for rate 80 (default)
+        let bounds = max(100, min(5, delay)) // Make the delay is reasonable
+        queue.asyncAfter(deadline: .now() + .milliseconds(bounds), execute: _executePendingTasks)
     }
 
     private func _executePendingTasks() {
@@ -81,13 +73,13 @@ internal final class RateLimiter {
             pending.remove(node)
         }
         isExecutingPendingTasks = false
-        if !pending.isEmpty { // not all pending items were executed
+        if !pending.isEmpty { // Not all pending items were executed
             _setNeedsExecutePendingTasks()
         }
     }
 
     private final class TokenBucket {
-        private let rate: Double
+        let rate: Double
         private let burst: Double // maximum bucket size
         private var bucket: Double
         private var timestamp: TimeInterval // last refill timestamp
@@ -123,55 +115,60 @@ internal final class RateLimiter {
     }
 }
 
-// MARK: - TaskQueue
+// MARK: - Operation
 
-/// Limits number of maximum concurrent tasks. By default tasks are executed on
-/// the underlying concurrent dispatch queue (with default options).
-internal final class TaskQueue {
-    // An alternative of using custom Foundation.Operation requires more code,
-    // less performant and even harder to get right https://github.com/kean/Nuke/issues/141.
-    private var executingTaskCount: Int = 0
-    private var pendingTasks = LinkedList<Task>() // fast append, fast remove first
-    private let maxConcurrentTaskCount: Int
-    private let executionQueue = DispatchQueue(label: "com.github.kean.Nuke.TaskQueue.Execution", attributes: .concurrent)
-    private let syncQueue = DispatchQueue(label: "com.github.kean.Nuke.TaskQueue.Sync")
+internal final class Operation: Foundation.Operation {
+    enum State { case executing, finished }
 
-    internal typealias Work = (_ finish: @escaping () -> Void) -> Void
-    private typealias Task = (CancellationToken, Work)
-
-    internal init(maxConcurrentTaskCount: Int) {
-        self.maxConcurrentTaskCount = maxConcurrentTaskCount
-    }
-
-    internal func execute(token: CancellationToken, _ closure: @escaping Work) {
-        syncQueue.async {
-            guard !token.isCancelling else { return } // fast preflight check
-            self.pendingTasks.append((token, closure))
-            self._executeTasksIfNecessary()
+    // `queue` here is basically to make TSan happy. In reality the calls to
+    // `_setState` are guaranteed to never run concurrently in different ways.
+    private var _state: State?
+    private func _setState(_ newState: State) {
+        willChangeValue(forKey: "isExecuting")
+        if newState == .finished {
+            willChangeValue(forKey: "isFinished")
+        }
+        queue.sync(flags: .barrier) {
+            _state = newState
+        }
+        didChangeValue(forKey: "isExecuting")
+        if newState == .finished {
+            didChangeValue(forKey: "isFinished")
         }
     }
 
-    private func _executeTasksIfNecessary() {
-        while executingTaskCount < maxConcurrentTaskCount, let node = pendingTasks.first {
-            pendingTasks.remove(node)
-            let task = node.value
-            if !task.0.isCancelling { // check if still not cancelled
-                executingTaskCount += 1 // only then execute
-                executionQueue.async { self._executeTask(task) }
-            }
+    override var isExecuting: Bool {
+        return queue.sync { _state == .executing }
+    }
+    override var isFinished: Bool {
+        return queue.sync { _state == .finished }
+    }
+
+    typealias Starter = (_ fulfill: @escaping () -> Void) -> Void
+    private let starter: Starter
+    private let queue = DispatchQueue(label: "com.github.kean.Nuke.Operation", attributes: .concurrent)
+
+    init(starter: @escaping Starter) {
+        self.starter = starter
+    }
+
+    override func start() {
+        guard !isCancelled else {
+            _setState(.finished)
+            return
+        }
+        _setState(.executing)
+        starter { [weak self] in
+            DispatchQueue.main.async { self?._finish() }
         }
     }
 
-    private func _executeTask(_ task: Task) {
-        var isFinished = false
-        task.1 { [weak self] in
-            self?.syncQueue.async {
-                guard !isFinished else { return } // finish called twice
-                isFinished = true
-                self?.executingTaskCount -= 1
-                self?._executeTasksIfNecessary()
-            }
-        }
+    // Calls to _finish() are syncrhonized on the main thread. This way we
+    // guarantee that `starter` doesn't finish operation more than once.
+    // Other paths are also guaranteed to be safe.
+    private func _finish() {
+        guard _state != .finished else { return }
+        _setState(.finished)
     }
 }
 
@@ -183,9 +180,13 @@ internal final class LinkedList<Element> {
     private(set) var first: Node?
     private(set) var last: Node?
 
-    deinit { removeAll() } // only available on classes
+    deinit {
+        removeAll()
+    }
 
-    var isEmpty: Bool { return last == nil }
+    var isEmpty: Bool {
+        return last == nil
+    }
 
     /// Adds an element to the end of the list.
     @discardableResult func append(_ element: Element) -> Node {
@@ -209,8 +210,12 @@ internal final class LinkedList<Element> {
     func remove(_ node: Node) {
         node.next?.previous = node.previous // node.previous is nil if node=first
         node.previous?.next = node.next // node.next is nil if node=last
-        if node === last { last = node.previous }
-        if node === first { first = node.next }
+        if node === last {
+            last = node.previous
+        }
+        if node === first {
+            first = node.next
+        }
         node.next = nil
         node.previous = nil
     }
@@ -232,50 +237,315 @@ internal final class LinkedList<Element> {
         fileprivate var next: Node?
         fileprivate var previous: Node?
 
-        init(value: Element) { self.value = value }
+        init(value: Element) {
+            self.value = value
+        }
     }
 }
 
-// MARK: - Bag
+// MARK: - CancellationToken
 
-/// Lightweight unordered data structure for storing a small number of elements.
-/// The idea is that it doesn't allocate any space on heap during initialization
-/// and it inlines first couple of elements and only then falls back to array
-/// (`ContiguousArray`) backed storage.
+/// Manages cancellation tokens and signals them when cancellation is requested.
 ///
-/// The name `Bag` (`Multiset`) is actually taken and it means something
-/// different than what this type does. But since it's an internal type it
-/// should work for now.
-internal struct Bag<Element>: Sequence {
-    private var first: Element? // inline first couple of elements
-    private var second: Element?
-    // ~20% faster than Array based on perf tests
-    private var remaining: ContiguousArray<Element>?
-
-    mutating func insert(_ value: Element) {
-        guard first != nil else { first = value; return } // inline first
-        guard second != nil else { second = value; return } // inline second
-        if remaining == nil { remaining = ContiguousArray<Element>() } // create lazily
-        remaining!.append(value)
+/// All `CancellationTokenSource` methods are thread safe.
+internal final class _CancellationTokenSource {
+    /// Returns `true` if cancellation has been requested.
+    var isCancelling: Bool {
+        return _lock.sync { _observers == nil }
     }
 
-    // MARK: Sequence
+    /// Creates a new token associated with the source.
+    var token: _CancellationToken {
+        return _CancellationToken(source: self)
+    }
 
-    internal struct BagIterator: IteratorProtocol {
-        private var index = 0
-        private var bag: Bag
-        init(_ bag: Bag) { self.bag = bag }
+    private var _observers: ContiguousArray<() -> Void>? = []
 
-        mutating func next() -> Element? {
-            defer { index += 1 }
-            if index == 0 { return bag.first }
-            if index == 1 { return bag.second }
-            guard let remaining = bag.remaining, index - 2 < remaining.endIndex else { return nil }
-            return remaining[index - 2]
+    /// Initializes the `CancellationTokenSource` instance.
+    init() {}
+
+    fileprivate func register(_ closure: @escaping () -> Void) {
+        if !_register(closure) {
+            closure()
         }
     }
 
-    func makeIterator() -> BagIterator {
-        return BagIterator(self)
+    private func _register(_ closure: @escaping () -> Void) -> Bool {
+        _lock.lock(); defer { _lock.unlock() }
+        _observers?.append(closure)
+        return _observers != nil
+    }
+
+    /// Communicates a request for cancellation to the managed tokens.
+    func cancel() {
+        if let observers = _cancel() {
+            observers.forEach { $0() }
+        }
+    }
+
+    private func _cancel() -> ContiguousArray<() -> Void>? {
+        _lock.lock(); defer { _lock.unlock() }
+        let observers = _observers
+        _observers = nil // transition to `isCancelling` state
+        return observers
+    }
+}
+
+/// Lightweight variant of _CancellationTokenSource with a single handler
+/// and struct instead of a class.
+internal struct _CancellationSource {
+    /// Returns `true` if cancellation has been requested.
+    var isCancelling: Bool {
+        return _lock.sync { _isCancelling }
+    }
+
+    private var _isCancelling: Bool = false
+    private var _observer: (() -> Void)?
+
+    mutating func register(_ closure: @escaping () -> Void) {
+        if !_register(closure) {
+            closure()
+        }
+    }
+
+    private mutating func _register(_ closure: @escaping () -> Void) -> Bool {
+        _lock.lock(); defer { _lock.unlock() }
+        guard !_isCancelling else { return false }
+        _observer = closure
+        return true
+    }
+
+    /// Communicates a request for cancellation to the managed tokens.
+    mutating func cancel() {
+        if let observer = _cancel() {
+            observer()
+        }
+    }
+
+    private mutating func _cancel() -> (() -> Void)? {
+        _lock.lock(); defer { _lock.unlock() }
+        guard !_isCancelling else { return nil }
+        _isCancelling = true
+        defer { _observer = nil }
+        return _observer
+    }
+}
+
+// We use the same lock across different tokens because the design of CTS
+// prevents potential issues. For example, closures registered with a token
+// are never executed inside a lock.
+private let _lock = NSLock()
+
+/// Enables cooperative cancellation of operations.
+///
+/// You create a cancellation token by instantiating a `CancellationTokenSource`
+/// object and calling its `token` property. You then pass the token to any
+/// number of threads, tasks, or operations that should receive notice of
+/// cancellation. When the owning object calls `cancel()`, the `isCancelling`
+/// property on every copy of the cancellation token is set to `true`.
+/// The registered objects can respond in whatever manner is appropriate.
+///
+/// All `CancellationToken` methods are thread safe.
+internal struct _CancellationToken {
+    fileprivate let source: _CancellationTokenSource? // no-op when `nil`
+
+    /// Returns `true` if cancellation has been requested for this token.
+    var isCancelling: Bool {
+        return source?.isCancelling ?? false
+    }
+
+    /// Registers the closure that will be called when the token is canceled.
+    /// If this token is already cancelled, the closure will be run immediately
+    /// and synchronously.
+    func register(_ closure: @escaping () -> Void) {
+        source?.register(closure)
+    }
+
+    /// Special no-op token which does nothing.
+    static var noOp: _CancellationToken {
+        return _CancellationToken(source: nil)
+    }
+}
+
+// MARK: - ResumableData
+
+/// Resumable data support. For more info see:
+/// - https://developer.apple.com/library/content/qa/qa1761/_index.html
+internal struct ResumableData {
+    let data: Data
+    let validator: String // Either Last-Modified or ETag
+
+    init?(response: URLResponse?, data: Data) {
+        // Check if "Accept-Ranges" is present and the response is valid.
+        guard !data.isEmpty,
+            let response = response as? HTTPURLResponse,
+            response.statusCode == 200 /* OK */ || response.statusCode == 206, /* Partial Content */
+            let acceptRanges = response.allHeaderFields["Accept-Ranges"] as? String,
+            acceptRanges.lowercased() == "bytes",
+            let validator = ResumableData._validator(from: response) else {
+                return nil
+        }
+
+        // NOTE: https://developer.apple.com/documentation/foundation/httpurlresponse/1417930-allheaderfields
+        // HTTP headers are case insensitive. To simplify your code, certain
+        // header field names are canonicalized into their standard form.
+        // For example, if the server sends a content-length header,
+        // it is automatically adjusted to be Content-Length.
+
+        self.data = data; self.validator = validator
+    }
+
+    private static func _validator(from response: HTTPURLResponse) -> String? {
+        if let entityTag = response.allHeaderFields["ETag"] as? String {
+            return entityTag // Prefer ETag
+        }
+        // There seems to be a bug with ETag where HTTPURLResponse would canonicalize
+        // it to Etag instead of ETag
+        // https://bugs.swift.org/browse/SR-2429
+        if let entityTag = response.allHeaderFields["Etag"] as? String {
+            return entityTag // Prefer ETag
+        }
+        if let lastModified = response.allHeaderFields["Last-Modified"] as? String {
+            return lastModified
+        }
+        return nil
+    }
+
+    func resume(request: inout URLRequest) {
+        var headers = request.allHTTPHeaderFields ?? [:]
+        // "bytes=1000-" means bytes from 1000 up to the end (inclusive)
+        headers["Range"] = "bytes=\(data.count)-"
+        headers["If-Range"] = validator
+        request.allHTTPHeaderFields = headers
+    }
+
+    // Check if the server decided to resume the response.
+    static func isResumedResponse(_ response: URLResponse) -> Bool {
+        // "206 Partial Content" (server accepted "If-Range")
+        return (response as? HTTPURLResponse)?.statusCode == 206
+    }
+
+    // MARK: Storing Resumable Data
+
+    /// Shared between multiple pipelines. Thread safe. In the future version we
+    /// might feature more customization options.
+    static var _cache = _Cache<String, ResumableData>(costLimit: 32 * 1024 * 1024, countLimit: 100) // internal only for testing purposes
+
+    static func removeResumableData(for request: URLRequest) -> ResumableData? {
+        guard let url = request.url?.absoluteString else { return nil }
+        return _cache.removeValue(forKey: url)
+    }
+
+    static func storeResumableData(_ data: ResumableData, for request: URLRequest) {
+        guard let url = request.url?.absoluteString else { return }
+        _cache.set(data, forKey: url, cost: data.data.count)
+    }
+}
+
+// MARK: - Printer
+
+/// Helper type for printing nice debug descriptions.
+internal struct Printer {
+    private(set) internal var _out = String()
+
+    private let timelineFormatter: DateFormatter
+
+    init(_ string: String = "") {
+        self._out = string
+
+        timelineFormatter = DateFormatter()
+        timelineFormatter.dateFormat = "HH:mm:ss.SSS"
+    }
+
+    func output(indent: Int = 0) -> String {
+        return _out.components(separatedBy: .newlines)
+            .map { $0.isEmpty ? "" : String(repeating: " ", count: indent) + $0 }
+            .joined(separator: "\n")
+    }
+
+    mutating func string(_ str: String) {
+        _out.append(str)
+    }
+
+    mutating func line(_ str: String) {
+        _out.append(str)
+        _out.append("\n")
+    }
+
+    mutating func value(_ key: String, _ value: CustomStringConvertible?) {
+        let val = value.map { String(describing: $0) }
+        line(key + " - " + (val ?? "nil"))
+    }
+
+    /// For producting nicely formatted timelines like this:
+    ///
+    /// 11:45:52.737 - Data Loading Start Date
+    /// 11:45:52.739 - Data Loading End Date
+    /// nil          - Decoding Start Date
+    mutating func timeline(_ key: String, _ date: Date?) {
+        let value = date.map { timelineFormatter.string(from: $0) }
+        self.value((value ?? "nil         "), key) // Swtich key with value
+    }
+
+    mutating func timeline(_ key: String, _ start: Date?, _ end: Date?, isReversed: Bool = true) {
+        let duration = _duration(from: start, to: end)
+        let value = "\(_string(from: start)) – \(_string(from: end)) (\(duration))"
+        if isReversed {
+            self.value(value.padding(toLength: 36, withPad: " ", startingAt: 0), key)
+        } else {
+            self.value(key, value)
+        }
+    }
+
+    mutating func section(title: String, _ closure: (inout Printer) -> Void) {
+        _out.append(contentsOf: title)
+        _out.append(" {\n")
+        var printer = Printer()
+        closure(&printer)
+        _out.append(printer.output(indent: 4))
+        _out.append("}\n")
+    }
+
+    // MARK: Formatters
+
+    private func _string(from date: Date?) -> String {
+        return date.map { timelineFormatter.string(from: $0) } ?? "nil"
+    }
+
+    private func _duration(from: Date?, to: Date?) -> String {
+        guard let from = from else { return "nil" }
+        guard let to = to else { return "unknown" }
+        return Printer.duration(to.timeIntervalSince(from)) ?? "nil"
+    }
+
+    static func duration(_ duration: TimeInterval?) -> String? {
+        guard let duration = duration else { return nil }
+
+        let m: Int = Int(duration) / 60
+        let s: Int = Int(duration) % 60
+        let ms: Int = Int(duration * 1000) % 1000
+
+        var output = String()
+        if m > 0 { output.append("\(m):") }
+        output.append(output.isEmpty ? "\(s)." : String(format: "%02d.", s))
+        output.append(String(format: "%03ds", ms))
+        return output
+    }
+}
+
+// MARK: Result
+
+// we're still using Result internally, but don't pollute user's space
+internal enum _Result<T> {
+    case success(T), failure(Error)
+
+    /// Returns a `value` if the result is success.
+    var value: T? {
+        if case let .success(val) = self { return val } else { return nil }
+    }
+
+    /// Returns an `error` if the result is failure.
+    var error: Error? {
+        if case let .failure(err) = self { return err } else { return nil }
     }
 }

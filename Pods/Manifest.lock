@@ -1,10 +1,10 @@
 PODS:
-  - Alamofire (4.5.1)
-  - AlamofireImage (3.3.0):
+  - Alamofire (4.7.2)
+  - AlamofireImage (3.3.1):
     - Alamofire (~> 4.5)
   - FLAnimatedImage (1.0.12)
-  - Kingfisher (4.3.1)
-  - Nuke (6.0)
+  - Kingfisher (4.7.0)
+  - Nuke (7.0-beta2)
   - PINCache (2.3)
   - PINRemoteImage (2.1.4):
     - PINRemoteImage/FLAnimatedImage (= 2.1.4)
@@ -13,9 +13,9 @@ PODS:
   - PINRemoteImage/FLAnimatedImage (2.1.4):
     - FLAnimatedImage (>= 1.0)
     - PINRemoteImage/Core
-  - SDWebImage (4.2.2):
-    - SDWebImage/Core (= 4.2.2)
-  - SDWebImage/Core (4.2.2)
+  - SDWebImage (4.3.3):
+    - SDWebImage/Core (= 4.3.3)
+  - SDWebImage/Core (4.3.3)
 
 DEPENDENCIES:
   - AlamofireImage
@@ -31,19 +31,19 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   Nuke:
-    :commit: 8ab27bc0240db339a45cc060c99a299bde009219
+    :commit: 1d38236a263703aebf9267e98915f17cb25f02e0
     :git: https://github.com/kean/Nuke.git
 
 SPEC CHECKSUMS:
-  Alamofire: 2d95912bf4c34f164fdfc335872e8c312acaea4a
-  AlamofireImage: 2e784dc5d00f04903a52c1d169181469c805c3df
+  Alamofire: e4fa87002c137ba2d8d634d2c51fabcda0d5c223
+  AlamofireImage: 3b35b586853abaf94ca1250f4e94cff3c21a4c0d
   FLAnimatedImage: 4a0b56255d9b05f18b6dd7ee06871be5d3b89e31
-  Kingfisher: 75541c4b62f02e1fde6f9772303de3d9ebe8f5b3
-  Nuke: 73108e57bba7c3d67c29c8b5cc133174d2689db5
+  Kingfisher: da6b005aa96d37698e3e4f1ccfe96a5b9bbf27d6
+  Nuke: c1a72e1a698e1345d0769c990ad551e671f1484b
   PINCache: ce36ed282031b92fc7733ffe831f474ff80fddc2
   PINRemoteImage: 4ac4011c5caefd6befd99758e09becede05d3226
-  SDWebImage: 89a9d32cd520bbb46eb14e541d5109b3564af198
+  SDWebImage: de4d90b5bff3571eae7bd16202b1f43135409fa5
 
 PODFILE CHECKSUM: 5ebd04a58a3f9a47047156ff95b38e1e73ed5751
 
-COCOAPODS: 1.3.1
+COCOAPODS: 1.4.0
