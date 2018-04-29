@@ -24,6 +24,6 @@ The results (higher is better):
 
 > Please keep in mind that this performance test makes for a very nice looking chart, but in practice, the difference between Nuke and say SDWebImage is not going to be that dramatic. Unless you app drops frames on a table or a collection view rendering, there is no real reason to switch.
 
-<img src="https://user-images.githubusercontent.com/1567433/39393415-495915f8-4ac5-11e8-82c9-71403c9c492d.png" width="800"/>
-<img src="https://user-images.githubusercontent.com/1567433/39393416-49754c5a-4ac5-11e8-9bb1-db564b414ec5.png" width="800"/>
+<img src="https://user-images.githubusercontent.com/1567433/39403788-52919298-4b84-11e8-826f-2d5814e1fd1d.png" width="800"/>
+<img src="https://user-images.githubusercontent.com/1567433/39403789-52ad2f4e-4b84-11e8-9830-32370cc95b5e.png" width="800"/>
 

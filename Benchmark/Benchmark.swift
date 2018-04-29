@@ -18,7 +18,7 @@ class CacheHitPerformanceTests: XCTestCase {
     let image = UIImage(named: "fixture")! // same image so that it gets decoded once
     let urls: [URL] = {
         // 10_000 iterations, but only 100 unique URLs
-        return (0..<10_000).map { _ in return URL(string: "http://test.com/\(arc4random_uniform(100)).jpeg")! }
+        return (0..<25_000).map { _ in return URL(string: "http://test.com/\(arc4random_uniform(100)).jpeg")! }
     }()
 
     func testNuke() {

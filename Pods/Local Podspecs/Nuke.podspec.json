@@ -1,6 +1,6 @@
 {
   "name": "Nuke",
-  "version": "7.0-beta2",
+  "version": "7.0-beta3",
   "summary": "A powerful image loading and caching framework",
   "description": "A powerful image loading and caching framework which allows for hassle-free image loading in your app - often in one line of code.",
   "homepage": "https://github.com/kean/Nuke",
@@ -9,7 +9,7 @@
   "social_media_url": "https://twitter.com/a_grebenyuk",
   "source": {
     "git": "https://github.com/kean/Nuke.git",
-    "tag": "7.0-beta2"
+    "tag": "7.0-beta3"
   },
   "platforms": {
     "ios": "9.0",

@@ -243,7 +243,7 @@ internal final class LinkedList<Element> {
     }
 }
 
-// MARK: - CancellationToken
+// MARK: - CancellationTokenSource
 
 /// Manages cancellation tokens and signals them when cancellation is requested.
 ///
@@ -291,6 +291,44 @@ internal final class _CancellationTokenSource {
     }
 }
 
+// We use the same lock across different tokens because the design of CTS
+// prevents potential issues. For example, closures registered with a token
+// are never executed inside a lock.
+private let _lock = NSLock()
+
+/// Enables cooperative cancellation of operations.
+///
+/// You create a cancellation token by instantiating a `CancellationTokenSource`
+/// object and calling its `token` property. You then pass the token to any
+/// number of threads, tasks, or operations that should receive notice of
+/// cancellation. When the owning object calls `cancel()`, the `isCancelling`
+/// property on every copy of the cancellation token is set to `true`.
+/// The registered objects can respond in whatever manner is appropriate.
+///
+/// All `CancellationToken` methods are thread safe.
+internal struct _CancellationToken {
+    fileprivate let source: _CancellationTokenSource? // no-op when `nil`
+
+    /// Returns `true` if cancellation has been requested for this token.
+    var isCancelling: Bool {
+        return source?.isCancelling ?? false
+    }
+
+    /// Registers the closure that will be called when the token is canceled.
+    /// If this token is already cancelled, the closure will be run immediately
+    /// and synchronously.
+    func register(_ closure: @escaping () -> Void) {
+        source?.register(closure)
+    }
+
+    /// Special no-op token which does nothing.
+    static var noOp: _CancellationToken {
+        return _CancellationToken(source: nil)
+    }
+}
+
+// MARK: - CancellationSource
+
 /// Lightweight variant of _CancellationTokenSource with a single handler
 /// and struct instead of a class.
 internal struct _CancellationSource {
@@ -328,42 +366,6 @@ internal struct _CancellationSource {
         _isCancelling = true
         defer { _observer = nil }
         return _observer
-    }
-}
-
-// We use the same lock across different tokens because the design of CTS
-// prevents potential issues. For example, closures registered with a token
-// are never executed inside a lock.
-private let _lock = NSLock()
-
-/// Enables cooperative cancellation of operations.
-///
-/// You create a cancellation token by instantiating a `CancellationTokenSource`
-/// object and calling its `token` property. You then pass the token to any
-/// number of threads, tasks, or operations that should receive notice of
-/// cancellation. When the owning object calls `cancel()`, the `isCancelling`
-/// property on every copy of the cancellation token is set to `true`.
-/// The registered objects can respond in whatever manner is appropriate.
-///
-/// All `CancellationToken` methods are thread safe.
-internal struct _CancellationToken {
-    fileprivate let source: _CancellationTokenSource? // no-op when `nil`
-
-    /// Returns `true` if cancellation has been requested for this token.
-    var isCancelling: Bool {
-        return source?.isCancelling ?? false
-    }
-
-    /// Registers the closure that will be called when the token is canceled.
-    /// If this token is already cancelled, the closure will be run immediately
-    /// and synchronously.
-    func register(_ closure: @escaping () -> Void) {
-        source?.register(closure)
-    }
-
-    /// Special no-op token which does nothing.
-    static var noOp: _CancellationToken {
-        return _CancellationToken(source: nil)
     }
 }
 
