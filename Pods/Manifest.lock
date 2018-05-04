@@ -31,7 +31,7 @@ EXTERNAL SOURCES:
 
 CHECKOUT OPTIONS:
   Nuke:
-    :commit: 539ef6920bae7f969f5173b64b16891cb892983e
+    :commit: 43db7713f5ecbaf96572ebb5033c19d724f909a6
     :git: https://github.com/kean/Nuke.git
 
 SPEC CHECKSUMS:

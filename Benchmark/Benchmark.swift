@@ -89,11 +89,6 @@ class CacheMissPerformanceTests: XCTestCase {
         return (0..<20_000).map { _ in return URL(string: "http://test.com/\(arc4random()).jpeg")! }
     }()
 
-    //    AlamofreImage and PINRemoteImage are rather slow and doesn't seem to
-    //    handle as much as 10_000 requests. You might want to limit the requests
-    //    count before uncommenting.
-    //
-
     func testNuke() {
         measure {
             for url in self.urls {
