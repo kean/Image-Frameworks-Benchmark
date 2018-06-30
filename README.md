@@ -1,6 +1,6 @@
 # Image Frameworks Benchmark
 
-> Udpated on April 27th 2018
+> Updated on April 27th 2018
 
 - [Nuke](https://github.com/kean/Nuke) 7.0 · Swift
 - [Kingfisher](https://github.com/onevcat/Kingfisher) 4.7.0 · Swift
