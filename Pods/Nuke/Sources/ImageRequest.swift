@@ -37,22 +37,26 @@ public struct ImageRequest {
         get {
             // Default processor on macOS is nil, on other platforms is Decompressor
             #if !os(macOS)
-            guard let custom = _ref._customProcessor else { return Container.decompressor }
+            return _ref._isDefaultProcessorUsed ? ImageRequest.decompressor : _ref._processor
             #else
-            guard let custom = _ref._customProcessor else { return nil }
+            return _ref._isDefaultProcessorUsed ? nil : _ref._processor
             #endif
-            return custom
         }
-        set { _mutate { $0._customProcessor = .some(newValue) } }
+        set {
+            _mutate {
+                $0._isDefaultProcessorUsed = false
+                $0._processor = newValue
+            }
+        }
     }
 
     /// The policy to use when reading or writing images to the memory cache.
     public struct MemoryCacheOptions {
         /// `true` by default.
-        public var readAllowed = true
+        public var isReadAllowed = true
 
         /// `true` by default.
-        public var writeAllowed = true
+        public var isWriteAllowed = true
 
         public init() {}
     }
@@ -77,7 +81,7 @@ public struct ImageRequest {
             }
         }
 
-        public static func <(lhs: Priority, rhs: Priority) -> Bool {
+        public static func < (lhs: Priority, rhs: Priority) -> Bool {
             return lhs.rawValue < rhs.rawValue
         }
     }
@@ -108,7 +112,16 @@ public struct ImageRequest {
         get { return _ref.loadKey }
         set { _mutate { $0.loadKey = newValue } }
     }
-    
+
+    /// If decoding is disabled, when the image data is loaded, the pipeline is
+    /// not going to create an image from it and will produce the `.decodingFailed`
+    /// error instead. `false` by default.
+    var isDecodingDisabled: Bool {
+        // This only used by `ImagePreheater` right now
+        get { return _ref.isDecodingDisabled }
+        set { _mutate { $0.isDecodingDisabled = newValue } }
+    }
+
     /// Custom info passed alongside the request.
     public var userInfo: Any? {
         get { return _ref.userInfo }
@@ -133,27 +146,45 @@ public struct ImageRequest {
 
     #if !os(macOS)
 
-    // Convenience initializers with `targetSize` and `contentMode`. The reason
-    // why those are implemented as separate init methods is to take advantage
-    // of memorized `decompressor` when custom parameters are not needed.
+    /// Initializes a request with the given URL.
+    /// - parameter processor: Custom image processer.
+    public init<Processor: ImageProcessing>(url: URL, processor: Processor) {
+        self.init(url: url)
+        self.processor = AnyImageProcessor(processor)
+    }
+
+    /// Initializes a request with the given request.
+    /// - parameter processor: Custom image processer.
+    public init<Processor: ImageProcessing>(urlRequest: URLRequest, processor: Processor) {
+        self.init(urlRequest: urlRequest)
+        self.processor = AnyImageProcessor(processor)
+    }
 
     /// Initializes a request with the given URL.
     /// - parameter targetSize: Size in pixels.
     /// - parameter contentMode: An option for how to resize the image
     /// to the target size.
-    public init(url: URL, targetSize: CGSize, contentMode: ImageDecompressor.ContentMode) {
-        self = ImageRequest(url: url)
-        _ref._customProcessor = AnyImageProcessor(ImageDecompressor(targetSize: targetSize, contentMode: contentMode))
+    public init(url: URL, targetSize: CGSize, contentMode: ImageDecompressor.ContentMode, upscale: Bool = false) {
+        self.init(url: url, processor: ImageDecompressor(
+            targetSize: targetSize,
+            contentMode: contentMode,
+            upscale: upscale
+        ))
     }
 
     /// Initializes a request with the given request.
     /// - parameter targetSize: Size in pixels.
     /// - parameter contentMode: An option for how to resize the image
     /// to the target size.
-    public init(urlRequest: URLRequest, targetSize: CGSize, contentMode: ImageDecompressor.ContentMode) {
-        self = ImageRequest(urlRequest: urlRequest)
-        _ref._customProcessor = AnyImageProcessor(ImageDecompressor(targetSize: targetSize, contentMode: contentMode))
+    public init(urlRequest: URLRequest, targetSize: CGSize, contentMode: ImageDecompressor.ContentMode, upscale: Bool = false) {
+        self.init(urlRequest: urlRequest, processor: ImageDecompressor(
+            targetSize: targetSize,
+            contentMode: contentMode,
+            upscale: upscale
+        ))
     }
+
+    fileprivate static let decompressor = AnyImageProcessor(ImageDecompressor())
 
     #endif
 
@@ -168,23 +199,21 @@ public struct ImageRequest {
         closure(_ref)
     }
 
-    /// Just like many Swift built-in types, `Request` uses CoW approach to
-    /// avoid memberwise retain/releases when `Request is passed around.
+    /// Just like many Swift built-in types, `ImageRequest` uses CoW approach to
+    /// avoid memberwise retain/releases when `ImageRequest` is passed around.
     private class Container {
         var resource: Resource
         var _urlString: String? // memoized absoluteString
-        // There are three cases:
-        // 1) Default value (custom processor not set)
-        // 2) Custom processor (.none)
-        // 3) Custom processor (.some)
-        // First case gives us a performance boost -> we don't need to store
-        // default processor in a container, we can just use static version
-        // when we need it.
-        var _customProcessor: AnyImageProcessor??
+        // true unless user set a custom one, this allows us not to store the
+        // default processor anywhere in the `Container` & skip equality tests
+        // when the default processor is used
+        var _isDefaultProcessorUsed: Bool = true
+        var _processor: AnyImageProcessor?
         var memoryCacheOptions = MemoryCacheOptions()
         var priority: ImageRequest.Priority = .normal
         var cacheKey: AnyHashable?
         var loadKey: AnyHashable?
+        var isDecodingDisabled: Bool = false
         var userInfo: Any?
 
         /// Creates a resource with a default processor.
@@ -196,17 +225,15 @@ public struct ImageRequest {
         init(container ref: Container) {
             self.resource = ref.resource
             self._urlString = ref._urlString
-            self._customProcessor = ref._customProcessor
+            self._isDefaultProcessorUsed = ref._isDefaultProcessorUsed
+            self._processor = ref._processor
             self.memoryCacheOptions = ref.memoryCacheOptions
             self.priority = ref.priority
             self.cacheKey = ref.cacheKey
             self.loadKey = ref.loadKey
+            self.isDecodingDisabled = ref.isDecodingDisabled
             self.userInfo = ref.userInfo
         }
-
-        #if !os(macOS)
-        fileprivate static let decompressor = AnyImageProcessor(ImageDecompressor())
-        #endif
     }
 
     /// Resource representation (either URL or URLRequest).
@@ -228,7 +255,8 @@ public extension ImageRequest {
     /// processors to the request.
     public mutating func process<P: ImageProcessing>(with processor: P) {
         guard let existing = self.processor else {
-            self.processor = AnyImageProcessor(processor); return
+            self.processor = AnyImageProcessor(processor)
+            return
         }
         // Chain new processor and the existing one.
         self.processor = AnyImageProcessor(ImageProcessorComposition([existing, AnyImageProcessor(processor)]))
@@ -260,16 +288,22 @@ internal extension ImageRequest {
         let request: ImageRequest
 
         var hashValue: Int {
+            if let customKey = request._ref.cacheKey {
+                return customKey.hashValue
+            }
             return request._ref._urlString?.hashValue ?? 0
         }
 
-        static func ==(lhs: CacheKey, rhs: CacheKey) -> Bool {
+        static func == (lhs: CacheKey, rhs: CacheKey) -> Bool {
             let lhs = lhs.request, rhs = rhs.request
             if let lhsCustomKey = lhs._ref.cacheKey, let rhsCustomKey = rhs._ref.cacheKey {
                 return lhsCustomKey == rhsCustomKey
             }
-            return lhs._ref._urlString == rhs._ref._urlString
-                && lhs._ref._customProcessor == rhs._ref._customProcessor
+            guard lhs._ref._urlString == rhs._ref._urlString else {
+                return false
+            }
+            return (lhs._ref._isDefaultProcessorUsed && rhs._ref._isDefaultProcessorUsed)
+                || (lhs.processor == rhs.processor)
         }
     }
 
@@ -277,13 +311,16 @@ internal extension ImageRequest {
         let request: ImageRequest
 
         var hashValue: Int {
+            if let customKey = request._ref.loadKey {
+                return customKey.hashValue
+            }
             return request._ref._urlString?.hashValue ?? 0
         }
 
-        static func ==(lhs: LoadKey, rhs: LoadKey) -> Bool {
-            func isEqual(_ a: URLRequest, _ b: URLRequest) -> Bool {
-                return a.cachePolicy == b.cachePolicy
-                    && a.allowsCellularAccess == b.allowsCellularAccess
+        static func == (lhs: LoadKey, rhs: LoadKey) -> Bool {
+            func isEqual(_ lhs: URLRequest, _ rhs: URLRequest) -> Bool {
+                return lhs.cachePolicy == rhs.cachePolicy
+                    && lhs.allowsCellularAccess == rhs.allowsCellularAccess
             }
             let lhs = lhs.request, rhs = rhs.request
             if let lhsCustomKey = lhs._ref.loadKey, let rhsCustomKey = rhs._ref.loadKey {
@@ -291,7 +328,6 @@ internal extension ImageRequest {
             }
             return lhs._ref._urlString == rhs._ref._urlString
                 && isEqual(lhs.urlRequest, rhs.urlRequest)
-                && lhs._ref._customProcessor == rhs._ref._customProcessor
         }
     }
 }

@@ -4,382 +4,458 @@
 
 import Foundation
 
-extension DataCache {
-    static var shared: DataCache?
+// MARK: - DataCaching
+
+/// Data cache.
+///
+/// - warning: The implementation must be thread safe.
+public protocol DataCaching {
+    /// Retrieves data from cache for the given key.
+    func cachedData(for key: String) -> Data?
+
+    /// Stores data for the given key.
+    /// - note: The implementation must return immediately and store data
+    /// asynchronously.
+    func storeData(_ data: Data, for key: String)
 }
 
-extension DispatchWorkItem: Cancellable {}
+// MARK: - DataCache
 
-/// Experimental data cache. The public API for disk cache is going to be
-/// available in the future versions when it goes out of beta.
-internal class DataCache {
-    typealias Key = String
-    struct Filename: Hashable {
-        let raw: String
-    }
-    
-    let path: URL
-    
-    // Index of entries.
+/// Data cache backed by a local storage.
+///
+/// The DataCache uses LRU cleanup policy (least recently used items are removed
+/// first). The elements stored in the cache are automatically discarded if
+/// either *cost* or *count* limit is reached. The sweeps are performed periodically.
+///
+/// DataCache always writes and removes data asynchronously. It also allows for
+/// reading and writing data in parallel. This is implemented using a "staging"
+/// area which stores changes until they are flushed to disk:
+///
+///     // Schedules data to be written asynchronously and returns immediately
+///     cache[key] = data
+///
+///     // The data is returned from the staging area
+///     let data = cache[key]
+///
+///     // Schedules data to be removed asynchronously and returns immediately
+///     cache[key] = nil
+///
+///     // Data is nil
+///     let data = cache[key]
+///
+/// Thread-safe.
+///
+/// - warning: It's possible to have more than one instance of `DataCache` with
+/// the same `path` but it is not recommended.
+public final class DataCache: DataCaching {
+    /// A cache key.
+    public typealias Key = String
+
+    /// The maximum number of items. `1000` by default.
+    ///
+    /// Changes tos `countLimit` will take effect when the next LRU sweep is run.
+    public var countLimit: Int = 1000
+
+    /// Size limit in bytes. `100 Mb` by default.
+    ///
+    /// Changes to `sizeLimit` will take effect when the next LRU sweep is run.
+    public var sizeLimit: Int = 1024 * 1024 * 100
+
+    /// When performing a sweep, the cache will remote entries until the size of
+    /// the remaining items is lower than or equal to `sizeLimit * trimRatio` and
+    /// the total count is lower than or equal to `countLimit * trimRatio`. `0.7`
+    /// by default.
+    internal var trimRatio = 0.7
+
+    /// The path for the directory managed by the cache.
+    public let path: URL
+
+    /// The number of seconds between each LRU sweep. 30 by default.
+    /// The first sweep is performed right after the cache is initialized.
+    ///
+    /// Sweeps are performed in a background and can be performed in parallel
+    /// with reading.
+    public var sweepInterval: TimeInterval = 30
+
+    /// The delay after which the initial sweep is performed. 10 by default.
+    /// The initial sweep is performed after a delay to avoid competing with
+    /// other subsystems for the resources.
+    private var initialSweepDelay: TimeInterval = 15
+
+    // Staging
     private let _lock = NSLock()
-    private var _index = [Filename: Entry]()
-    
-    /// The number of seconds between each discard sweep. 30 by default.
-    /// The first sweep is run right after the cache is initialzied.
-    var sweepInterval: TimeInterval = 30
-    private let _algorithm: CacheAlgorithm?
+    private var _staging = Staging()
 
-    // Persistence
-    private let _rqueue = DispatchQueue(label: "com.github.kean.Nuke.DataCache.ReadQueue")
-    private let _wqueue = DispatchQueue(label: "com.github.kean.Nuke.DataCache.WriteQueue") // _wqueue is internal to make it @testable
-    
-    // Temporary
-    var _keyEncoder: (String) -> String? = { return $0 }
-    
-    convenience init(name: String, algorithm: CacheAlgorithm? = CacheAlgorithmLRU()) throws {
+    /* testable */ let _wqueue = DispatchQueue(label: "com.github.kean.Nuke.DataCache.WriteQueue")
+
+    /// A function which generates a filename for the given key. A good candidate
+    /// for a filename generator is a _cryptographic_ hash function like SHA1.
+    ///
+    /// The reason why filename needs to be generated in the first place is
+    /// that filesystems have a size limit for filenames (e.g. 255 UTF-8 characters
+    /// in AFPS) and do not allow certain characters to be used in filenames.
+    public typealias FilenameGenerator = (_ key: String) -> String?
+
+    private let _filenameGenerator: FilenameGenerator
+
+    #if swift(>=4.2)
+    /// Creates a cache instance with a given `name`. The cache creates a directory
+    /// with the given `name` in a `.cachesDirectory` in `.userDomainMask`.
+    /// - parameter filenameGenerator: Generates a filename for the given URL.
+    /// The default implementation generates a filename using SHA1 hash function.
+    public convenience init(name: String, filenameGenerator: @escaping (String) -> String? = DataCache.filename(for:)) throws {
         guard let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
             throw NSError(domain: NSCocoaErrorDomain, code: NSFileNoSuchFileError, userInfo: nil)
         }
-        try self.init(path: root.appendingPathComponent(name, isDirectory: true), algorithm: algorithm)
+        try self.init(path: root.appendingPathComponent(name, isDirectory: true), filenameGenerator: filenameGenerator)
     }
-    
-    init(path: URL, algorithm: CacheAlgorithm? = CacheAlgorithmLRU()) throws {
+
+    /// Creates a cache instance with a given path.
+    /// - parameter filenameGenerator: Generates a filename for the given URL.
+    /// The default implementation generates a filename using SHA1 hash function.
+    public init(path: URL, filenameGenerator: @escaping (String) -> String? = DataCache.filename(for:)) throws {
         self.path = path
-        self._algorithm = algorithm
-        
+        self._filenameGenerator = filenameGenerator
+        try self._didInit()
+    }
+
+    /// A `FilenameGenerator` implementation which uses SHA1 hash function to
+    /// generate a filename from the given key.
+    public static func filename(for key: String) -> String? {
+        return key.sha1
+    }
+    #else
+    /// Creates a cache instance with a given `name`. The cache creates a directory
+    /// with the given `name` in a `.cachesDirectory` in `.userDomainMask`.
+    /// - parameter filenameGenerator: Generates a filename for the given URL.
+    public convenience init(name: String, filenameGenerator: @escaping (String) -> String?) throws {
+        guard let root = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else {
+            throw NSError(domain: NSCocoaErrorDomain, code: NSFileNoSuchFileError, userInfo: nil)
+        }
+        try self.init(path: root.appendingPathComponent(name, isDirectory: true), filenameGenerator: filenameGenerator)
+    }
+
+    /// Creates a cache instance with a given path.
+    /// - parameter filenameGenerator: Generates a filename for the given URL.
+    public init(path: URL, filenameGenerator: @escaping (String) -> String?) throws {
+        self.path = path
+        self._filenameGenerator = filenameGenerator
+        try self._didInit()
+    }
+    #endif
+
+    private func _didInit() throws {
         try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true, attributes: nil)
-        
-        // Pay a little price upfront to get better performance and more control
-        // later (we need this index anyway to perform sweeps). We take advantage
-        /// of fast filesystem metadata. Loading an index of cache with 1000 items
-        // 64 Kb each (~ 62 Mb total) is almost instantaneous on modern hardware.
-        self._rqueue.async {
-            // We load index on _rqueue this way we guarantee that index is
-            // going to be available by the first time `data(for:completion)` is
-            // called, but synchronous calls might return nil.
-            self._lock.lock()
-            self._loadIndex()
-            self._lock.unlock()
-            self._wqueue.async {
-                self._scheduleSweep()
-                self._sweep()
-            }
-        }
-    }
-    
-    // MARK: Loading Index
-    
-    /// Takes advantage of the fast filesystem metadata. Reading contents of
-    /// cache directory is not that much slower than, for instance, maintaining
-    /// our own persistent index.
-    private func _loadIndex() {
-        let resourceKeys: Set<URLResourceKey> = [.creationDateKey, .contentAccessDateKey, .fileSizeKey, .totalFileAllocatedSizeKey]
-        for url in _contents(keys: Array(resourceKeys)) {
-            if let meta = try? url.resourceValues(forKeys: resourceKeys) {
-                let filename = Filename(raw: url.lastPathComponent)
-                _index[filename] = Entry(filename: filename, url: url, metadata: meta)
-            }
-        }
-    }
-    
-    private func _contents(keys: [URLResourceKey]) -> [URL] {
-        return (try? FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: keys, options: .skipsHiddenFiles)) ?? []
-    }
-    
-    // MARK: Data Accessors
-    
-    func filename(for key: Key) -> Filename? {
-        return _keyEncoder(key).map(Filename.init(raw:))
-    }
-    
-    subscript(key: Key) -> Data? {
-        get {
-            guard let filename = self.filename(for: key) else { return nil }
-            return _getData(for: filename)
-        }
-        set {
-            guard let filename = self.filename(for: key) else { return }
-            if let data = newValue {
-                _setData(data, for: filename)
-            } else {
-                _removeData(for: filename)
-            }
+        _wqueue.asyncAfter(deadline: .now() + initialSweepDelay) { [weak self] in
+            self?._performAndScheduleSweep()
         }
     }
 
-    private func _getData(for filename: Filename) -> Data? {
+    // MARK: DataCaching
+
+    /// Retrieves data for the given key. The completion will be called
+    /// syncrhonously if there is no cached data for the given key.
+    public func cachedData(for key: Key) -> Data? {
         _lock.lock()
-        guard let entry = _index[filename] else {
+
+        if let change = _staging.change(for: key) {
             _lock.unlock()
-            return nil
-        }
-        entry.accessDate = Date()
-        let payload = entry.payload
-        _lock.unlock()
-        
-        switch payload {
-        case let .staged(data): return data
-        case let .saved(url): return try? Data(contentsOf: url)
-        }
-    }
-    
-    private func _setData(_ data: Data, for filename: Filename) {
-        let entry = Entry(filename: filename, data: data)
-        
-        _lock.lock()
-        _index[filename] = entry // Replace with the new value
-        _lock.unlock()
-        
-        _wqueue.async {
-            let url = self.path.appendingPathComponent(filename.raw, isDirectory: false)
-            
-            try? data.write(to: url)
-            let size = (try? url.resourceValues(forKeys: [.totalFileAllocatedSizeKey]))?.totalFileAllocatedSize
-            
-            self._lock.lock()
-            entry.payload = .saved(url) // Flushed the changes
-            entry.totalFileAllocatedSize = size
-            self._lock.unlock()
-        }
-    }
-    
-    private func _removeData(for filename: Filename) {
-        _lock.lock()
-        _removeData(for: [filename])
-        _lock.unlock()
-    }
-    
-    private func _removeData(for filenames: [Filename]) {
-        let removed = filenames.compactMap { _index.removeValue(forKey: $0) }
-        guard !removed.isEmpty else { return }
-        _wqueue.async {
-            let urls = self._lock.sync {
-                removed.compactMap { $0.payload.url }
-            }
-            urls.forEach {
-                try? FileManager.default.removeItem(at: $0)
-            }
-        }
-    }
-    
-    /// Removes all items asynchronously.
-    func removeAll() {
-        _lock.lock()
-        _index.removeAll()
-        _lock.unlock()
-        
-        _wqueue.async {
-            try? FileManager.default.removeItem(at: self.path)
-            try? FileManager.default.createDirectory(at: self.path, withIntermediateDirectories: true, attributes: nil)
-        }
-    }
-    
-    // MARK: Flush Changes
-    
-    /// Synchronously waits on the callers thread while all the remaining
-    /// entries are flushed to disk.
-    func flush() {
-        // Wait until everything is written and flush keys
-        _wqueue.sync {}
-    }
-    
-    // MARK: Sweep
-    
-    private func _scheduleSweep() {
-        _wqueue.asyncAfter(deadline: .now() + sweepInterval) { [weak self] in
-            self?._sweep()
-            self?._scheduleSweep()
-        }
-    }
-    
-    func sweep() {
-        guard let algorithm = _algorithm else { return }
-        sweep(with: algorithm)
-    }
-    
-    func sweep(with algorithm: CacheAlgorithm) {
-        _wqueue.async {
-            self._sweep(with: algorithm)
-        }
-    }
-    
-    private func _sweep() {
-        guard let algorithm = _algorithm else { return }
-        _sweep(with: algorithm)
-    }
-    
-    private func _sweep(with algorithm: CacheAlgorithm) {
-        _lock.lock()
-        let discarded = algorithm.discarded(items: _index.values)
-        _removeData(for: discarded.map { $0.filename })
-        _lock.unlock()
-    }
-    
-    // MARK: Inspection
-    
-    /// Allows you to inspect the cache contents. This method executes synchronously.
-    /// synchronously in the cache's critical section.
-    func inspect<T>(_ closure: ([Filename: Entry]) -> T) -> T {
-        return _lock.sync { closure(_index) }
-    }
-    
-    /// The total number of items in the cache.
-    var totalCount: Int {
-        return _lock.sync { _index.count }
-    }
-    
-    /// The total size of items in the cache.
-    var totalSize: Int {
-        return _lock.sync {
-            _index.reduce(0) { $0 + ($1.value.fileSize ?? 0) }
-        }
-    }
-    
-    /// Might be underestimdated until all write operation are completed.
-    var totalAllocatedSize: Int {
-        return _lock.sync {
-            _index.reduce(0) { $0 + $1.value.underestimatedSize }
-        }
-    }
-
-    // MARK: Temporary
-
-    @discardableResult func data(for key: Key, _ completion: @escaping (Data?) -> Void) -> Cancellable {
-        let work = DispatchWorkItem { [weak self] in
-            completion(self?[key])
-        }
-        _rqueue.async(execute: work)
-        return work
-    }
-
-    // MARK: Testing
-    
-    func _test_withSuspendedIO(_ closure: () -> Void) {
-        _wqueue.suspend()
-        closure()
-        _wqueue.resume()
-    }
-
-    // MARK: Entry
-    
-    final class Entry {
-        /// The date the entry was created (`URLResourceKey.creationDateKey`).
-        internal(set) var creationDate: Date?
-        
-        /// The date the entry was last accessed (`URLResourceKey.contentAccessDateKey`).
-        internal(set) var accessDate: Date?
-        
-        /// File size in bytes (`URLResourceKey.fileSizeKey`).
-        internal(set) var fileSize: Int?
-        
-        /// Total size allocated on disk for the file in bytes (number of blocks
-        /// times block size) (`URLResourceKey.fileAllocatedSizeKey`).
-        ///
-        /// The allocated size doesn't become available until the data is
-        /// actually written to disk.
-        internal(set) var totalFileAllocatedSize: Int?
-        
-        var underestimatedSize: Int {
-            return totalFileAllocatedSize ?? fileSize ?? 0
-        }
-        
-        let filename: Filename
-        
-        enum Payload {
-            case staged(Data)
-            case saved(URL)
-            
-            var url: URL? {
-                if case let .saved(url) = self { return url }
+            switch change {
+            case let .add(data):
+                return data
+            case .remove:
                 return nil
             }
         }
-        var payload: Payload
-        
-        init(filename: Filename, payload: Payload) {
-            self.filename = filename
-            self.payload = payload
+
+        _lock.unlock()
+
+        guard let url = _url(for: key) else {
+            return nil
         }
-        
-        convenience init(filename: Filename, url: URL, metadata: URLResourceValues) {
-            self.init(filename: filename, payload: .saved(url))
-            self.creationDate = metadata.creationDate
-            self.accessDate = metadata.contentAccessDate
-            self.fileSize = metadata.fileSize
-            self.totalFileAllocatedSize = metadata.totalFileAllocatedSize
-        }
-        
-        convenience init(filename: Filename, data: Data) {
-            self.init(filename: filename, payload: .staged(data))
-            let now = Date()
-            self.creationDate = now
-            self.accessDate = now
-            self.fileSize = data.count
+        return try? Data(contentsOf: url)
+    }
+
+    /// Stores data for the given key. The method returns instantly and the data
+    /// is written asynchronously.
+    public func storeData(_ data: Data, for key: Key) {
+        _lock.sync {
+            let change = _staging.add(data: data, for: key)
+            _wqueue.async {
+                if let url = self._url(for: key) {
+                    try? data.write(to: url)
+                }
+                self._lock.sync {
+                    self._staging.flushed(change)
+                }
+            }
         }
     }
-}
 
-/// Protocol that represents a [cache algorithm](https://en.wikipedia.org/wiki/Cache_replacement_policies)
-/// (also called *cache replacement policy*).
-protocol CacheAlgorithm {
-    /// Filters an array of items to contain only items that should be
-    /// discarded to make room for the new ones.
+    /// Removes data for the given key. The method returns instantly, the data
+    /// is removed asynchronously.
+    public func removeData(for key: Key) {
+        _lock.sync {
+            let change = _staging.removeData(for: key)
+            _wqueue.async {
+                if let url = self._url(for: key) {
+                    try? FileManager.default.removeItem(at: url)
+                }
+                self._lock.sync {
+                    self._staging.flushed(change)
+                }
+            }
+        }
+    }
+
+    /// Removes all items. The method returns instantly, the data is removed
+    /// asynchronously.
+    public func removeAll() {
+        _lock.sync {
+            let change = _staging.removeAll()
+            _wqueue.async {
+                try? FileManager.default.removeItem(at: self.path)
+                try? FileManager.default.createDirectory(at: self.path, withIntermediateDirectories: true, attributes: nil)
+                self._lock.sync {
+                    self._staging.flushed(change)
+                }
+            }
+        }
+    }
+
+    /// Accesses the data associated with the given key for reading and writing.
     ///
-    /// This method gets called periodically by the Cache. The argument is
-    /// marked as `inout` to achieve max performance.
-    func discarded<Items: Collection>(items: Items) -> [DataCache.Entry] where Items.Element == DataCache.Entry
-}
-
-/// Discards least recently used items first.
-struct CacheAlgorithmLRU: CacheAlgorithm {
-    /// The maximum number of items. `1000` by default.
-    var countLimit: Int
-    
-    /// Size limit in bytes. `100 Mb` by default.
-    var sizeLimit: Int
-    
-    /// The `discarded(items:)` method removes items until the total
-    /// size of the remaining items is lower then or equal to
-    /// `sizeLimit * trimRatio` and the total count is lower then or
-    /// equal to `countLimit * trimRatio`. `0.7` by default.
-    var trimRatio = 0.7
-
-    /// - parameter countLimit: The maximum number of items. `1000` by default.
-    /// - parameter sizeLimit: Size limit in bytes. `100 Mb` by default.
-    init(countLimit: Int = 1000, sizeLimit: Int = 1024 * 1024 * 100) {
-        self.countLimit = countLimit
-        self.sizeLimit = sizeLimit
+    /// When you assign a new data for a key and the key already exists, the cache
+    /// overwrites the existing data.
+    ///
+    /// When assigning or removing data, the subscript adds a requested operation
+    /// in a staging area and returns immediately. The staging area allows for
+    /// reading and writing data in parallel.
+    ///
+    ///     // Schedules data to be written asynchronously and returns immediately
+    ///     cache[key] = data
+    ///
+    ///     // The data is returned from the staging area
+    ///     let data = cache[key]
+    ///
+    ///     // Schedules data to be removed asynchronously and returns immediately
+    ///     cache[key] = nil
+    ///
+    ///     // Data is nil
+    ///     let data = cache[key]
+    ///
+    public subscript(key: Key) -> Data? {
+        get {
+            return cachedData(for: key)
+        }
+        set {
+            if let data = newValue {
+                storeData(data, for: key)
+            } else {
+                removeData(for: key)
+            }
+        }
     }
-    
+
+    // MARK: Managing URLs
+
+    /// Uses the `FilenameGenerator` that the cache was initialized with to
+    /// generate and return a filename for the given key.
+    public func filename(for key: Key) -> String? {
+        return _filenameGenerator(key)
+    }
+
+    /* testable */ func _url(for key: Key) -> URL? {
+        guard let filename = self.filename(for: key) else {
+            return nil
+        }
+        return self.path.appendingPathComponent(filename, isDirectory: false)
+    }
+
+    // MARK: Flush Changes
+
+    /// Synchronously waits on the caller's thread until all outstanding disk IO
+    /// operations are finished.
+    func flush() {
+        _wqueue.sync {}
+    }
+
+    // MARK: Sweep
+
+    private func _performAndScheduleSweep() {
+        _sweep()
+        _wqueue.asyncAfter(deadline: .now() + sweepInterval) { [weak self] in
+            self?._performAndScheduleSweep()
+        }
+    }
+
+    /// Schedules a cache sweep to be performed immediately.
+    public func sweep() {
+        _wqueue.async {
+            self._sweep()
+        }
+    }
+
     /// Discards the least recently used items first.
-    func discarded<Items>(items: Items) -> [DataCache.Entry] where Items : Collection, Items.Element == DataCache.Entry {
-        guard items.count > 0 else { return [] }
-        
-        var size = items.reduce(0) { $0 + $1.underestimatedSize }
+    private func _sweep() {
+        var items = contents(keys: [.contentAccessDateKey, .totalFileAllocatedSizeKey])
+        guard !items.isEmpty else {
+            return
+        }
+        var size = items.reduce(0) { $0 + ($1.meta.totalFileAllocatedSize ?? 0) }
         var count = items.count
         let sizeLimit = self.sizeLimit / Int(1 / trimRatio)
         let countLimit = self.countLimit / Int(1 / trimRatio)
-        
-        guard (size > sizeLimit || count > countLimit) else {
-            return [] // All good, no need to perform any work.
+
+        guard size > sizeLimit || count > countLimit else {
+            return // All good, no need to perform any work.
         }
-        
-        // Least recently accessed items first
+
+        // Most recently accessed items first
         let past = Date.distantPast
-        let sorted = items.sorted {
-            // In pratice items must always have `accessDate` at this point
-            ($0.accessDate ?? past) < ($1.accessDate ?? past)
+        items.sort { // Sort in place
+            ($0.meta.contentAccessDate ?? past) > ($1.meta.contentAccessDate ?? past)
         }
-        
+
         // Remove the items until we satisfy both size and count limits.
-        var idx = 0
-        while (size > sizeLimit || count > countLimit), idx <= sorted.endIndex {
-            size -= sorted[idx].underestimatedSize
+        while (size > sizeLimit || count > countLimit), let item = items.popLast() {
+            size -= (item.meta.totalFileAllocatedSize ?? 0)
             count -= 1
-            idx += 1
+            try? FileManager.default.removeItem(at: item.url)
         }
-        
-        // Remove all remaining items
-        return Array(sorted[0..<idx])
+    }
+
+    // MARK: Contents
+
+    struct Entry {
+        let url: URL
+        let meta: URLResourceValues
+    }
+
+    func contents(keys: [URLResourceKey] = []) -> [Entry] {
+        guard let urls = try? FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: keys, options: .skipsHiddenFiles) else {
+            return []
+        }
+        let _keys = Set(keys)
+        return urls.compactMap {
+            guard let meta = try? $0.resourceValues(forKeys: _keys) else {
+                return nil
+            }
+            return Entry(url: $0, meta: meta)
+        }
+    }
+
+    // MARK: Inspection
+
+    /// The total number of items in the cache.
+    /// - warning: Requires disk IO, avoid using from the main thread.
+    public var totalCount: Int {
+        return contents().count
+    }
+
+    /// The total file size of items written on disk.
+    ///
+    /// Uses `URLResourceKey.fileSizeKey` to calculate the size of each entry.
+    /// The total allocated size (see `totalAllocatedSize`. on disk might
+    /// actually be bigger.
+    ///
+    /// - warning: Requires disk IO, avoid using from the main thread.
+    public var totalSize: Int {
+        return contents(keys: [.fileSizeKey]).reduce(0) {
+            $0 + ($1.meta.fileSize ?? 0)
+        }
+    }
+
+    /// The total file allocated size of all the items written on disk.
+    ///
+    /// Uses `URLResourceKey.totalFileAllocatedSizeKey`.
+    ///
+    /// - warning: Requires disk IO, avoid using from the main thread.
+    public var totalAllocatedSize: Int {
+        return contents(keys: [.totalFileAllocatedSizeKey]).reduce(0) {
+            $0 + ($1.meta.totalFileAllocatedSize ?? 0)
+        }
+    }
+
+    // MARK: - Staging
+
+    /// DataCache allows for parallel reads and writes. This is made possible by
+    /// DataCacheStaging.
+    ///
+    /// For example, when the data is added in cache, it is first added to staging
+    /// and is removed from staging only after data is written to disk. Removal works
+    /// the same way.
+    private final class Staging {
+        private var changes = [String: Change]()
+        private var changeRemoveAll: ChangeRemoveAll?
+
+        struct ChangeRemoveAll {
+            let id: Int
+        }
+
+        struct Change {
+            let key: String
+            let id: Int
+            let type: ChangeType
+        }
+
+        enum ChangeType {
+            case add(Data)
+            case remove
+        }
+
+        private var nextChangeId = 0
+
+        // MARK: Changes
+
+        func change(for key: String) -> ChangeType? {
+            if let change = changes[key] {
+                return change.type
+            }
+            if changeRemoveAll != nil {
+                return .remove
+            }
+            return nil
+        }
+
+        // MARK: Register Changes
+
+        func add(data: Data, for key: String) -> Change {
+            return _makeChange(.add(data), for: key)
+        }
+
+        func removeData(for key: String) -> Change {
+            return _makeChange(.remove, for: key)
+        }
+
+        private func _makeChange(_ type: ChangeType, for key: String) -> Change {
+            nextChangeId += 1
+            let change = Change(key: key, id: nextChangeId, type: type)
+            changes[key] = change
+            return change
+        }
+
+        func removeAll() -> ChangeRemoveAll {
+            nextChangeId += 1
+            let change = ChangeRemoveAll(id: nextChangeId)
+            changeRemoveAll = change
+            changes.removeAll()
+            return change
+        }
+
+        // MARK: Flush Changes
+
+        func flushed(_ change: Change) {
+            if let index = changes.index(forKey: change.key),
+                changes[index].value.id == change.id {
+                changes.remove(at: index)
+            }
+        }
+
+        func flushed(_ change: ChangeRemoveAll) {
+            if changeRemoveAll?.id == change.id {
+                changeRemoveAll = nil
+            }
+        }
     }
 }

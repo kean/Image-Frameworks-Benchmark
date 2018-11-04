@@ -30,7 +30,7 @@ internal final class RateLimiter {
     private var pending = LinkedList<Task>() // fast append, fast remove first
     private var isExecutingPendingTasks = false
 
-    private typealias Task = (_CancellationToken, () -> Void)
+    private typealias Task = (CancellationToken, () -> Void)
 
     /// Initializes the `RateLimiter` with the given configuration.
     /// - parameter queue: Queue on which to execute pending tasks.
@@ -42,7 +42,7 @@ internal final class RateLimiter {
         self.bucket = TokenBucket(rate: Double(rate), burst: Double(burst))
     }
 
-    func execute(token: _CancellationToken, _ closure: @escaping () -> Void) {
+    func execute(token: CancellationToken, _ closure: @escaping () -> Void) {
         let task = Task(token, closure)
         if !pending.isEmpty || !_execute(task) {
             pending.append(task)
@@ -118,35 +118,39 @@ internal final class RateLimiter {
 // MARK: - Operation
 
 internal final class Operation: Foundation.Operation {
-    enum State { case executing, finished }
-
-    // `queue` here is basically to make TSan happy. In reality the calls to
-    // `_setState` are guaranteed to never run concurrently in different ways.
-    private var _state: State?
-    private func _setState(_ newState: State) {
-        willChangeValue(forKey: "isExecuting")
-        if newState == .finished {
-            willChangeValue(forKey: "isFinished")
-        }
-        queue.sync(flags: .barrier) {
-            _state = newState
-        }
-        didChangeValue(forKey: "isExecuting")
-        if newState == .finished {
-            didChangeValue(forKey: "isFinished")
-        }
-    }
+    private var _isExecuting = false
+    private var _isFinished = false
+    private var _isFinishCalled: Int32 = 0
 
     override var isExecuting: Bool {
-        return queue.sync { _state == .executing }
+        set {
+            guard _isExecuting != newValue else {
+                fatalError("Invalid state, operation is already (not) executing")
+            }
+            willChangeValue(forKey: "isExecuting")
+            _isExecuting = newValue
+            didChangeValue(forKey: "isExecuting")
+        }
+        get {
+            return _isExecuting
+        }
     }
     override var isFinished: Bool {
-        return queue.sync { _state == .finished }
+        set {
+            guard !_isFinished else {
+                fatalError("Invalid state, operation is already finished")
+            }
+            willChangeValue(forKey: "isFinished")
+            _isFinished = newValue
+            didChangeValue(forKey: "isFinished")
+        }
+        get {
+            return _isFinished
+        }
     }
 
-    typealias Starter = (_ fulfill: @escaping () -> Void) -> Void
+    typealias Starter = (_ finish: @escaping () -> Void) -> Void
     private let starter: Starter
-    private let queue = DispatchQueue(label: "com.github.kean.Nuke.Operation", attributes: .concurrent)
 
     init(starter: @escaping Starter) {
         self.starter = starter
@@ -154,21 +158,21 @@ internal final class Operation: Foundation.Operation {
 
     override func start() {
         guard !isCancelled else {
-            _setState(.finished)
+            isFinished = true
             return
         }
-        _setState(.executing)
+        isExecuting = true
         starter { [weak self] in
-            DispatchQueue.main.async { self?._finish() }
+            self?._finish()
         }
     }
 
-    // Calls to _finish() are syncrhonized on the main thread. This way we
-    // guarantee that `starter` doesn't finish operation more than once.
-    // Other paths are also guaranteed to be safe.
     private func _finish() {
-        guard _state != .finished else { return }
-        _setState(.finished)
+        // Make sure that we ignore if `finish` is called more than once.
+        if OSAtomicCompareAndSwap32Barrier(0, 1, &_isFinishCalled) {
+            isExecuting = false
+            isFinished = true
+        }
     }
 }
 
@@ -189,7 +193,8 @@ internal final class LinkedList<Element> {
     }
 
     /// Adds an element to the end of the list.
-    @discardableResult func append(_ element: Element) -> Node {
+    @discardableResult
+    func append(_ element: Element) -> Node {
         let node = Node(value: element)
         append(node)
         return node
@@ -248,15 +253,15 @@ internal final class LinkedList<Element> {
 /// Manages cancellation tokens and signals them when cancellation is requested.
 ///
 /// All `CancellationTokenSource` methods are thread safe.
-internal final class _CancellationTokenSource {
+internal final class CancellationTokenSource {
     /// Returns `true` if cancellation has been requested.
     var isCancelling: Bool {
         return _lock.sync { _observers == nil }
     }
 
     /// Creates a new token associated with the source.
-    var token: _CancellationToken {
-        return _CancellationToken(source: self)
+    var token: CancellationToken {
+        return CancellationToken(source: self)
     }
 
     private var _observers: ContiguousArray<() -> Void>? = []
@@ -306,10 +311,11 @@ private let _lock = NSLock()
 /// The registered objects can respond in whatever manner is appropriate.
 ///
 /// All `CancellationToken` methods are thread safe.
-internal struct _CancellationToken {
-    fileprivate let source: _CancellationTokenSource? // no-op when `nil`
+internal struct CancellationToken {
+    fileprivate let source: CancellationTokenSource? // no-op when `nil`
 
     /// Returns `true` if cancellation has been requested for this token.
+    /// Returns `false` if the source was deallocated.
     var isCancelling: Bool {
         return source?.isCancelling ?? false
     }
@@ -319,53 +325,6 @@ internal struct _CancellationToken {
     /// and synchronously.
     func register(_ closure: @escaping () -> Void) {
         source?.register(closure)
-    }
-
-    /// Special no-op token which does nothing.
-    static var noOp: _CancellationToken {
-        return _CancellationToken(source: nil)
-    }
-}
-
-// MARK: - CancellationSource
-
-/// Lightweight variant of _CancellationTokenSource with a single handler
-/// and struct instead of a class.
-internal struct _CancellationSource {
-    /// Returns `true` if cancellation has been requested.
-    var isCancelling: Bool {
-        return _lock.sync { _isCancelling }
-    }
-
-    private var _isCancelling: Bool = false
-    private var _observer: (() -> Void)?
-
-    mutating func register(_ closure: @escaping () -> Void) {
-        if !_register(closure) {
-            closure()
-        }
-    }
-
-    private mutating func _register(_ closure: @escaping () -> Void) -> Bool {
-        _lock.lock(); defer { _lock.unlock() }
-        guard !_isCancelling else { return false }
-        _observer = closure
-        return true
-    }
-
-    /// Communicates a request for cancellation to the managed tokens.
-    mutating func cancel() {
-        if let observer = _cancel() {
-            observer()
-        }
-    }
-
-    private mutating func _cancel() -> (() -> Void)? {
-        _lock.lock(); defer { _lock.unlock() }
-        guard !_isCancelling else { return nil }
-        _isCancelling = true
-        defer { _observer = nil }
-        return _observer
     }
 }
 
@@ -377,7 +336,7 @@ internal struct ResumableData {
     let data: Data
     let validator: String // Either Last-Modified or ETag
 
-    init?(response: URLResponse?, data: Data) {
+    init?(response: URLResponse, data: Data) {
         // Check if "Accept-Ranges" is present and the response is valid.
         guard !data.isEmpty,
             let response = response as? HTTPURLResponse,
@@ -535,19 +494,78 @@ internal struct Printer {
     }
 }
 
-// MARK: Result
+// MARK: - Misc
 
-// we're still using Result internally, but don't pollute user's space
-internal enum _Result<T> {
-    case success(T), failure(Error)
+struct TaskMetrics {
+    var startDate: Date? = nil
+    var endDate: Date? = nil
 
-    /// Returns a `value` if the result is success.
-    var value: T? {
-        if case let .success(val) = self { return val } else { return nil }
+    static func started() -> TaskMetrics {
+        var metrics = TaskMetrics()
+        metrics.start()
+        return metrics
     }
 
-    /// Returns an `error` if the result is failure.
-    var error: Error? {
-        if case let .failure(err) = self { return err } else { return nil }
+    mutating func start() {
+        startDate = Date()
+    }
+
+    mutating func end() {
+        endDate = Date()
     }
 }
+
+/// A simple observable property. Not thread safe.
+final class Property<T> {
+    var value: T {
+        didSet {
+            for observer in observers {
+                observer(value)
+            }
+        }
+    }
+
+    init(value: T) {
+        self.value = value
+    }
+
+    private var observers = [(T) -> Void]()
+
+    // For our use-cases we can just ignore unsubscribing for now.
+    func observe(_ closure: @escaping (T) -> Void) {
+        observers.append(closure)
+    }
+}
+
+// MARK: - Misc
+
+#if !swift(>=4.1)
+extension Sequence {
+    public func compactMap<ElementOfResult>(_ transform: (Element) throws -> ElementOfResult?) rethrows -> [ElementOfResult] {
+        return try flatMap(transform)
+    }
+}
+#endif
+
+#if swift(>=4.2)
+import CommonCrypto
+
+extension String {
+    /// Calculates SHA1 from the given string and returns its hex representation.
+    ///
+    /// ```swift
+    /// print("http://test.com".sha1)
+    /// // prints "50334ee0b51600df6397ce93ceed4728c37fee4e"
+    /// ```
+    var sha1: String? {
+        guard let input = self.data(using: .utf8) else {
+            return nil
+        }
+        var hash = [UInt8](repeating: 0, count: Int(CC_SHA1_DIGEST_LENGTH))
+        input.withUnsafeBytes {
+            _ = CC_SHA1($0, CC_LONG(input.count), &hash)
+        }
+        return hash.map({ String(format: "%02x", $0) }).joined()
+    }
+}
+#endif

@@ -28,7 +28,8 @@ public final class DataLoader: DataLoading {
     /// Initializes `DataLoader` with the given configuration.
     /// - parameter configuration: `URLSessionConfiguration.default` with
     /// `URLCache` with 0 MB memory capacity and 150 MB disk capacity.
-    public init(configuration: URLSessionConfiguration = DataLoader.defaultConfiguration, validate: @escaping (URLResponse) -> Swift.Error? = DataLoader.validate) {
+    public init(configuration: URLSessionConfiguration = DataLoader.defaultConfiguration,
+                validate: @escaping (URLResponse) -> Swift.Error? = DataLoader.validate) {
         self._impl = _DataLoader()
         self.session = URLSession(configuration: configuration, delegate: _impl, delegateQueue: _impl.queue)
         self._impl.session = self.session
@@ -50,7 +51,9 @@ public final class DataLoader: DataLoading {
         return (200..<300).contains(response.statusCode) ? nil : Error.statusCodeUnacceptable(response.statusCode)
     }
 
-#if os(macOS)
+#if !os(macOS)
+    private static let cachePath = "com.github.kean.Nuke.Cache"
+#else
     private static let cachePath: String = {
         let cachePaths = NSSearchPathForDirectoriesInDomains(.cachesDirectory, .userDomainMask, true)
         if let cachePath = cachePaths.first, let identifier = Bundle.main.bundleIdentifier {
@@ -59,8 +62,6 @@ public final class DataLoader: DataLoading {
 
         return ""
     }()
-#else
-    private static let cachePath = "com.github.kean.Nuke.Cache"
 #endif
 
     /// Shared url cached used by a default `DataLoader`. The cache is
@@ -157,4 +158,3 @@ private final class _DataLoader: NSObject, URLSessionDataDelegate {
         }
     }
 }
-

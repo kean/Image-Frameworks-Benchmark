@@ -3,10 +3,10 @@
 // Copyright (c) 2015-2018 Alexander Grebenyuk (github.com/kean).
 
 import Foundation
-#if os(macOS)
-    import Cocoa
+#if !os(macOS)
+import UIKit
 #else
-    import UIKit
+import Cocoa
 #endif
 
 /// In-memory image cache.
@@ -45,7 +45,7 @@ public extension ImageCaching {
 /// The elements stored in cache are automatically discarded if either *cost* or
 /// *count* limit is reached. The default cost limit represents a number of bytes
 /// and is calculated based on the amount of physical memory available on the
-/// device. The default count limit is set to `Int.max`.
+/// device. The default cmount limit is set to `Int.max`.
 ///
 /// `Cache` automatically removes all stored elements when it received a
 /// memory warning. It also automatically removes *most* of cached elements
@@ -109,7 +109,7 @@ public final class ImageCache: ImageCaching {
 
     /// Stores the given `ImageResponse` in the cache using the given request.
     public func storeResponse(_ response: ImageResponse, for request: ImageRequest) {
-        _impl.set(response, forKey: ImageRequest.CacheKey(request: request), cost: self.cost(response.image))
+        _impl.set(response, forKey: ImageRequest.CacheKey(request: request), cost: self.cost(for: response.image))
     }
 
     /// Removes response stored with the given request.
@@ -134,17 +134,20 @@ public final class ImageCache: ImageCaching {
     }
 
     /// Returns cost for the given image by approximating its bitmap size in bytes in memory.
-    public var cost: (Image) -> Int = {
-        #if os(macOS)
-            return 1
+    func cost(for image: Image) -> Int {
+        #if !os(macOS)
+        let dataCost = ImagePipeline.Configuration.isAnimatedImageDataEnabled ? (image.animatedImageData?.count ?? 0) : 0
+
+        // bytesPerRow * height gives a rough estimation of how much memory
+        // image uses in bytes. In practice this algorithm combined with a
+        // concervative default cost limit works OK.
+        guard let cgImage = image.cgImage else {
+            return 1 + dataCost
+        }
+        return cgImage.bytesPerRow * cgImage.height + dataCost
+
         #else
-            // bytesPerRow * height gives a rough estimation of how much memory
-            // image uses in bytes. In practice this algorithm combined with a 
-            // concervative default cost limit works OK.
-            guard let cgImage = $0.cgImage else {
-                return 1
-            }
-            return cgImage.bytesPerRow * cgImage.height
+        return 1
         #endif
     }
 }
@@ -175,8 +178,13 @@ internal final class _Cache<Key: Hashable, Value> {
         self.costLimit = costLimit
         self.countLimit = countLimit
         #if os(iOS) || os(tvOS)
+        #if swift(>=4.2)
+        NotificationCenter.default.addObserver(self, selector: #selector(removeAll), name: UIApplication.didReceiveMemoryWarningNotification, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+        #else
         NotificationCenter.default.addObserver(self, selector: #selector(removeAll), name: .UIApplicationDidReceiveMemoryWarning, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(didEnterBackground), name: .UIApplicationDidEnterBackground, object: nil)
+        #endif
         #endif
     }
 
@@ -184,17 +192,6 @@ internal final class _Cache<Key: Hashable, Value> {
         #if os(iOS) || os(tvOS)
         NotificationCenter.default.removeObserver(self)
         #endif
-    }
-
-    subscript(key: Key) -> Value? {
-        get { return value(forKey: key) }
-        set {
-            if let newValue = newValue {
-                set(newValue, forKey: key)
-            } else {
-                removeValue(forKey: key)
-            }
-        }
     }
 
     func value(forKey key: Key) -> Value? {
@@ -226,7 +223,8 @@ internal final class _Cache<Key: Hashable, Value> {
         _trim() // _trim is extremely fast, it's OK to call it each time
     }
 
-    @discardableResult func removeValue(forKey key: Key) -> Value? {
+    @discardableResult
+    func removeValue(forKey key: Key) -> Value? {
         lock.lock(); defer { lock.unlock() }
 
         guard let node = map[key] else { return nil }
