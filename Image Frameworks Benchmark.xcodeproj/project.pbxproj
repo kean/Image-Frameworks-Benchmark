@@ -14,7 +14,7 @@
 		0C6A935F1D9FEAA900290284 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0C6A935E1D9FEAA900290284 /* Assets.xcassets */; };
 		0C6A93621D9FEAA900290284 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0C6A93601D9FEAA900290284 /* LaunchScreen.storyboard */; };
 		0C6A937E1D9FEB0900290284 /* Benchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6A937D1D9FEB0900290284 /* Benchmark.swift */; };
-		817908550138E4BB736F071F /* Pods_Benchmark.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = CA69D17F37E3F4282831081A /* Pods_Benchmark.framework */; };
+		5E39624F5028FB9E52237289 /* Pods_Benchmark.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5982E6A3E17C23EF16BBBCC4 /* Pods_Benchmark.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -39,9 +39,9 @@
 		0C6A937B1D9FEB0900290284 /* Benchmark.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Benchmark.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C6A937D1D9FEB0900290284 /* Benchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Benchmark.swift; sourceTree = "<group>"; };
 		0C6A937F1D9FEB0900290284 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		1D573B0E45C486C2AD9C7385 /* Pods-Benchmark.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Benchmark.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Benchmark/Pods-Benchmark.debug.xcconfig"; sourceTree = "<group>"; };
-		CA69D17F37E3F4282831081A /* Pods_Benchmark.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Benchmark.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		E70C30223E3FCA40CC462A99 /* Pods-Benchmark.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Benchmark.release.xcconfig"; path = "Pods/Target Support Files/Pods-Benchmark/Pods-Benchmark.release.xcconfig"; sourceTree = "<group>"; };
+		1F4C3EEF2201A427D11BCFE5 /* Pods-Benchmark.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Benchmark.debug.xcconfig"; path = "Pods/Target Support Files/Pods-Benchmark/Pods-Benchmark.debug.xcconfig"; sourceTree = "<group>"; };
+		5982E6A3E17C23EF16BBBCC4 /* Pods_Benchmark.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Benchmark.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		9148308F29AB32C7655B6330 /* Pods-Benchmark.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Benchmark.release.xcconfig"; path = "Pods/Target Support Files/Pods-Benchmark/Pods-Benchmark.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,38 +56,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				817908550138E4BB736F071F /* Pods_Benchmark.framework in Frameworks */,
+				5E39624F5028FB9E52237289 /* Pods_Benchmark.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		07B2ADBE2AAC12F76AAD0D3E /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				1D573B0E45C486C2AD9C7385 /* Pods-Benchmark.debug.xcconfig */,
-				E70C30223E3FCA40CC462A99 /* Pods-Benchmark.release.xcconfig */,
-			);
-			name = Pods;
-			sourceTree = "<group>";
-		};
-		0AF9007B133509926D457325 /* Frameworks */ = {
-			isa = PBXGroup;
-			children = (
-				CA69D17F37E3F4282831081A /* Pods_Benchmark.framework */,
-			);
-			name = Frameworks;
-			sourceTree = "<group>";
-		};
 		0C6A934B1D9FEAA900290284 = {
 			isa = PBXGroup;
 			children = (
 				0C6A93561D9FEAA900290284 /* Image Frameworks Benchmark */,
 				0C6A937C1D9FEB0900290284 /* Benchmark */,
 				0C6A93551D9FEAA900290284 /* Products */,
-				07B2ADBE2AAC12F76AAD0D3E /* Pods */,
-				0AF9007B133509926D457325 /* Frameworks */,
+				5DBEF9D77F14ADA35C070680 /* Pods */,
+				BE890695E3AE87D0B1FD4FF3 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -123,6 +106,23 @@
 			path = Benchmark;
 			sourceTree = "<group>";
 		};
+		5DBEF9D77F14ADA35C070680 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				1F4C3EEF2201A427D11BCFE5 /* Pods-Benchmark.debug.xcconfig */,
+				9148308F29AB32C7655B6330 /* Pods-Benchmark.release.xcconfig */,
+			);
+			name = Pods;
+			sourceTree = "<group>";
+		};
+		BE890695E3AE87D0B1FD4FF3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				5982E6A3E17C23EF16BBBCC4 /* Pods_Benchmark.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -147,11 +147,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 0C6A93821D9FEB0900290284 /* Build configuration list for PBXNativeTarget "Benchmark" */;
 			buildPhases = (
-				074B4BF578314CD2C5D0E005 /* [CP] Check Pods Manifest.lock */,
+				9170D107877A01E199372D98 /* [CP] Check Pods Manifest.lock */,
 				0C6A93771D9FEB0900290284 /* Sources */,
 				0C6A93781D9FEB0900290284 /* Frameworks */,
 				0C6A93791D9FEB0900290284 /* Resources */,
-				65465D3E0473ACE6620E52CE /* [CP] Embed Pods Frameworks */,
+				DB40A1E9FECF0EE857E3E170 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -229,16 +229,20 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		074B4BF578314CD2C5D0E005 /* [CP] Check Pods Manifest.lock */ = {
+		9170D107877A01E199372D98 /* [CP] Check Pods Manifest.lock */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			inputFileListPaths = (
 			);
 			inputPaths = (
 				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
 				"${PODS_ROOT}/Manifest.lock",
 			);
 			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
 			outputPaths = (
 				"$(DERIVED_FILE_DIR)/Pods-Benchmark-checkManifestLockResult.txt",
 			);
@@ -247,10 +251,12 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		65465D3E0473ACE6620E52CE /* [CP] Embed Pods Frameworks */ = {
+		DB40A1E9FECF0EE857E3E170 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+			);
+			inputFileListPaths = (
 			);
 			inputPaths = (
 				"${SRCROOT}/Pods/Target Support Files/Pods-Benchmark/Pods-Benchmark-frameworks.sh",
@@ -264,6 +270,8 @@
 				"${BUILT_PRODUCTS_DIR}/SDWebImage/SDWebImage.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+			);
 			outputPaths = (
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Alamofire.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/AlamofireImage.framework",
@@ -466,7 +474,7 @@
 		};
 		0C6A93831D9FEB0900290284 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 1D573B0E45C486C2AD9C7385 /* Pods-Benchmark.debug.xcconfig */;
+			baseConfigurationReference = 1F4C3EEF2201A427D11BCFE5 /* Pods-Benchmark.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
@@ -481,7 +489,7 @@
 		};
 		0C6A93841D9FEB0900290284 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E70C30223E3FCA40CC462A99 /* Pods-Benchmark.release.xcconfig */;
+			baseConfigurationReference = 9148308F29AB32C7655B6330 /* Pods-Benchmark.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
