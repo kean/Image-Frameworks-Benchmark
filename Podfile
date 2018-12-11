@@ -7,4 +7,5 @@ target 'Benchmark' do
 	pod 'Kingfisher'
 	pod 'SDWebImage'
 	pod 'PINRemoteImage'
+	pod 'TwitterImagePipeline'
 end
