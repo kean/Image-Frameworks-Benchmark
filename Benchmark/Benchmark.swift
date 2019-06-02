@@ -10,7 +10,7 @@ import Kingfisher
 import SDWebImage
 import PINRemoteImage
 import PINCache
-import TwitterImagePipeline
+//import TwitterImagePipeline
 
 // MARK: - Main-Thread Performance
 
@@ -83,31 +83,31 @@ class CacheHitPerformanceTests: XCTestCase {
         }
     }
     
-    func testTwitterImagePipeline() {
-        class FetchRequest: NSObject, TIPImageFetchRequest {
-            var imageURL: URL
-            
-            init(imageURL url: URL) {
-                self.imageURL = url
-            }
-        }
-        
-        let pipeline = TIPImagePipeline(identifier: "tip")!
-        for url in self.urls {
-            pipeline.operation(with: FetchRequest(imageURL: url), context: nil, delegate: nil)
-        }
-        
-        measure {
-            for url in self.urls {
-                pipeline.operation(with: FetchRequest(imageURL: url),
-                                   context: nil,
-                                   completion: { [weak self] (result, error) in
-                                    guard let `self` = self, let _ = error else { return }
-                                    self.view.image = result?.imageContainer.image
-                })
-            }
-        }
-    }
+//    func testTwitterImagePipeline() {
+//        class FetchRequest: NSObject, TIPImageFetchRequest {
+//            var imageURL: URL
+//
+//            init(imageURL url: URL) {
+//                self.imageURL = url
+//            }
+//        }
+//
+//        let pipeline = TIPImagePipeline(identifier: "tip")!
+//        for url in self.urls {
+//            pipeline.operation(with: FetchRequest(imageURL: url), context: nil, delegate: nil)
+//        }
+//
+//        measure {
+//            for url in self.urls {
+//                pipeline.operation(with: FetchRequest(imageURL: url),
+//                                   context: nil,
+//                                   completion: { [weak self] (result, error) in
+//                                    guard let `self` = self, let _ = error else { return }
+//                                    self.view.image = result?.imageContainer.image
+//                })
+//            }
+//        }
+//    }
 }
 
 class CacheMissPerformanceTests: XCTestCase {
@@ -156,26 +156,26 @@ class CacheMissPerformanceTests: XCTestCase {
         }
     }
     
-    func testTwitterImagePipeline() {
-        class FetchRequest: NSObject, TIPImageFetchRequest {
-            var imageURL: URL
-            
-            init(imageURL url: URL) {
-                self.imageURL = url
-            }
-        }
-        
-        let pipeline = TIPImagePipeline(identifier: "tip")!
-        
-        measure {
-            for url in self.urls {
-                pipeline.operation(with: FetchRequest(imageURL: url),
-                                   context: nil,
-                                   completion: { [weak self] (result, error) in
-                                    guard let `self` = self, let _ = error else { return }
-                                    self.view.image = result?.imageContainer.image
-                })
-            }
-        }
-    }
+//    func testTwitterImagePipeline() {
+//        class FetchRequest: NSObject, TIPImageFetchRequest {
+//            var imageURL: URL
+//            
+//            init(imageURL url: URL) {
+//                self.imageURL = url
+//            }
+//        }
+//        
+//        let pipeline = TIPImagePipeline(identifier: "tip")!
+//        
+//        measure {
+//            for url in self.urls {
+//                pipeline.operation(with: FetchRequest(imageURL: url),
+//                                   context: nil,
+//                                   completion: { [weak self] (result, error) in
+//                                    guard let `self` = self, let _ = error else { return }
+//                                    self.view.image = result?.imageContainer.image
+//                })
+//            }
+//        }
+//    }
 }
