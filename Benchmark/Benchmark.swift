@@ -30,6 +30,7 @@ class CacheHitPerformanceTests: XCTestCase {
         measure {
             for url in self.urls {
                 Nuke.loadImage(with: url, into: self.view)
+//                self.view.nk.setImage(with: url)
             }
         }
     }
