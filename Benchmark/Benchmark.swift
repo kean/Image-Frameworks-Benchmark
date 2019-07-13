@@ -74,7 +74,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
     func testSDWebImage() {
         for url in self.urls {
-            SDImageCache.shared().store(image, imageData: nil, forKey: url.absoluteString, toDisk: false, completion: nil)
+            SDImageCache.shared.store(image, imageData: nil, forKey: url.absoluteString, toDisk: false, completion: nil)
         }
 
         measure {

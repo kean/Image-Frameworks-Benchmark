@@ -27,17 +27,16 @@
       selectedDebuggerIdentifier = ""
       selectedLauncherIdentifier = "Xcode.IDEFoundation.Launcher.PosixSpawn"
       shouldUseLaunchSchemeArgsEnv = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "0C6A93531D9FEAA900290284"
+            BuildableName = "Image Frameworks Benchmark.app"
+            BlueprintName = "Image Frameworks Benchmark"
+            ReferencedContainer = "container:Image Frameworks Benchmark.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
       <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "0C6A936C1D9FEABD00290284"
-               BuildableName = "Image Frameworks Benchmark Tests.xctest"
-               BlueprintName = "Image Frameworks Benchmark Tests"
-               ReferencedContainer = "container:Image Frameworks Benchmark.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
          <TestableReference
             skipped = "NO">
             <BuildableReference
@@ -49,17 +48,6 @@
             </BuildableReference>
          </TestableReference>
       </Testables>
-      <MacroExpansion>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "0C6A93531D9FEAA900290284"
-            BuildableName = "Image Frameworks Benchmark.app"
-            BlueprintName = "Image Frameworks Benchmark"
-            ReferencedContainer = "container:Image Frameworks Benchmark.xcodeproj">
-         </BuildableReference>
-      </MacroExpansion>
-      <AdditionalOptions>
-      </AdditionalOptions>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -81,11 +69,16 @@
             ReferencedContainer = "container:Image Frameworks Benchmark.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <AdditionalOptions>
-      </AdditionalOptions>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "OS_ACTIVITY_MODE"
+            value = "disable"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
    </LaunchAction>
    <ProfileAction
-      buildConfiguration = "Debug"
+      buildConfiguration = "Release"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
