@@ -1,12 +1,12 @@
 # Image Frameworks Benchmark
 
-> Updated on November 4, 2018
+> Updated on July 13, 2019
 
-- [Nuke](https://github.com/kean/Nuke) 7.5.1 · Swift
-- [Kingfisher](https://github.com/onevcat/Kingfisher) 4.10.1 · Swift
-- [AlamofireImage](https://github.com/Alamofire/AlamofireImage) 3.4.1 · Swift
-- [SDWebImage](https://github.com/rs/SDWebImage) 4.4.2 · Objective-C
+- [Nuke](https://github.com/kean/Nuke) 8.0 · Swift
+- [SDWebImage](https://github.com/rs/SDWebImage) 5.0.6 · Objective-C
 - [PINRemoteImage](https://github.com/pinterest/PINRemoteImage) 2.1.4 · Objective-C
+- [Kingfisher](https://github.com/onevcat/Kingfisher) 5.7.0 · Swift
+- [AlamofireImage](https://github.com/Alamofire/AlamofireImage) 3.5.2 · Swift
 
 ## Main Thread Performance
 
@@ -24,6 +24,6 @@ The results (higher is better):
 
 > Please keep in mind that this performance test makes for a very nice looking chart, but in practice, the difference between Nuke and say SDWebImage is not going to be that dramatic. Unless you app drops frames on a table or a collection view rendering, there is no real reason to switch.
 
-<img src="https://user-images.githubusercontent.com/1567433/47966921-c2d02e80-e057-11e8-98a1-efb3829514e8.png" width="800"/>
-<img src="https://user-images.githubusercontent.com/1567433/47966922-c2d02e80-e057-11e8-8993-80605b20190d.png" width="800"/>
+<img src="https://user-images.githubusercontent.com/1567433/61174515-92a33d00-a5a1-11e9-839f-c2a1a1237f52.png" width="800"/>
+<img src="https://user-images.githubusercontent.com/1567433/61174516-92a33d00-a5a1-11e9-8915-55cf9ba519a2.png" width="800"/>
 
