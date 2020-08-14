@@ -10,6 +10,7 @@ import Kingfisher
 import SDWebImage
 import PINRemoteImage
 import PINCache
+import YYWebImage
 //import TwitterImagePipeline
 
 // MARK: - Main-Thread Performance
@@ -31,6 +32,18 @@ class CacheHitPerformanceTests: XCTestCase {
             for url in self.urls {
                 Nuke.loadImage(with: url, into: self.view)
 //                self.view.nk.setImage(with: url)
+            }
+        }
+    }
+    
+    func testYYImage() {
+        for url in self.urls {
+            YYWebImageManager.shared().cache?.setImage(image, forKey: url.absoluteString)
+        }
+        
+        measure {
+            for url in self.urls {
+                self.view.yy_setImage(with: url)
             }
         }
     }
@@ -116,6 +129,14 @@ class CacheMissPerformanceTests: XCTestCase {
     let urls: [URL] = {
         return (0..<20_000).map { _ in return URL(string: "http://test.com/\(arc4random()).jpeg")! }
     }()
+    
+    func testYYImage() {
+        measure {
+            for url in self.urls {
+                self.view.yy_setImage(with: url)
+            }
+        }
+    }
 
     func testNuke() {
         measure {
