@@ -16,6 +16,13 @@ PODS:
   - SDWebImage (5.0.6):
     - SDWebImage/Core (= 5.0.6)
   - SDWebImage/Core (5.0.6)
+  - YYCache (1.0.4)
+  - YYImage (1.0.4):
+    - YYImage/Core (= 1.0.4)
+  - YYImage/Core (1.0.4)
+  - YYWebImage (1.0.5):
+    - YYCache
+    - YYImage
 
 DEPENDENCIES:
   - AlamofireImage
@@ -23,9 +30,10 @@ DEPENDENCIES:
   - Nuke (from `https://github.com/kean/Nuke.git`, branch `master`)
   - PINRemoteImage
   - SDWebImage
+  - YYWebImage
 
 SPEC REPOS:
-  https://github.com/cocoapods/specs.git:
+  https://github.com/CocoaPods/Specs.git:
     - Alamofire
     - AlamofireImage
     - FLAnimatedImage
@@ -33,6 +41,9 @@ SPEC REPOS:
     - PINCache
     - PINRemoteImage
     - SDWebImage
+    - YYCache
+    - YYImage
+    - YYWebImage
 
 EXTERNAL SOURCES:
   Nuke:
@@ -53,7 +64,10 @@ SPEC CHECKSUMS:
   PINCache: ce36ed282031b92fc7733ffe831f474ff80fddc2
   PINRemoteImage: 4ac4011c5caefd6befd99758e09becede05d3226
   SDWebImage: 920f1a2ff1ca8296ad34f6e0510a1ef1d70ac965
+  YYCache: 8105b6638f5e849296c71f331ff83891a4942952
+  YYImage: 1e1b62a9997399593e4b9c4ecfbbabbf1d3f3b54
+  YYWebImage: 5f7f36aee2ae293f016d418c7d6ba05c4863e928
 
-PODFILE CHECKSUM: 5ebd04a58a3f9a47047156ff95b38e1e73ed5751
+PODFILE CHECKSUM: 46455a4ad961fa1b4e852b22d69743eaa6e83f88
 
-COCOAPODS: 1.7.3
+COCOAPODS: 1.9.3
