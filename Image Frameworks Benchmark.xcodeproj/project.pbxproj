@@ -28,7 +28,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		00BB1061B8C548C09CA126F4 /* Pods-Benchmark.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Benchmark.release.xcconfig"; path = "Target Support Files/Pods-Benchmark/Pods-Benchmark.release.xcconfig"; sourceTree = "<group>"; };
 		0C397D98209447DE00647303 /* fixture.jpeg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = fixture.jpeg; sourceTree = "<group>"; };
 		0C6A93541D9FEAA900290284 /* Image Frameworks Benchmark.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Image Frameworks Benchmark.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		0C6A93571D9FEAA900290284 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -41,7 +40,6 @@
 		0C6A937D1D9FEB0900290284 /* Benchmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Benchmark.swift; sourceTree = "<group>"; };
 		0C6A937F1D9FEB0900290284 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0F02DA6A703743A623B646AE /* Pods_Benchmark.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Benchmark.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		E59D826609E0E66CD3456135 /* Pods-Benchmark.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Benchmark.debug.xcconfig"; path = "Target Support Files/Pods-Benchmark/Pods-Benchmark.debug.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -69,7 +67,6 @@
 				0C6A93561D9FEAA900290284 /* Image Frameworks Benchmark */,
 				0C6A937C1D9FEB0900290284 /* Benchmark */,
 				0C6A93551D9FEAA900290284 /* Products */,
-				AA2FCCA256228AEBB31315F5 /* Pods */,
 				D2378CEDE5722D5C20E7613D /* Frameworks */,
 			);
 			sourceTree = "<group>";
@@ -104,15 +101,6 @@
 				0C6A937F1D9FEB0900290284 /* Info.plist */,
 			);
 			path = Benchmark;
-			sourceTree = "<group>";
-		};
-		AA2FCCA256228AEBB31315F5 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				E59D826609E0E66CD3456135 /* Pods-Benchmark.debug.xcconfig */,
-				00BB1061B8C548C09CA126F4 /* Pods-Benchmark.release.xcconfig */,
-			);
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		D2378CEDE5722D5C20E7613D /* Frameworks */ = {
@@ -473,7 +461,6 @@
 		};
 		0C6A93831D9FEB0900290284 /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E59D826609E0E66CD3456135 /* Pods-Benchmark.debug.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
@@ -488,7 +475,6 @@
 		};
 		0C6A93841D9FEB0900290284 /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 00BB1061B8C548C09CA126F4 /* Pods-Benchmark.release.xcconfig */;
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
