@@ -10,8 +10,8 @@ import Kingfisher
 import SDWebImage
 import AppleSample
 
-// MARK: - Main-Thread Performance
-
+/// These tests cover the main-thread performance for the scenario where the
+/// fetched image is availalbe in the memory cache (cache hit).
 class CacheHitPerformanceTests: XCTestCase {
     let view = UIImageView()
     let image = UIImage(named: "fixture")! // same image so that it gets decoded once
@@ -22,7 +22,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
     func testNuke() {
         for url in self.urls {
-            Nuke.ImageCache.shared.storeResponse(ImageResponse(image: image, urlResponse: nil), for: ImageRequest(url: url))
+            Nuke.ImageCache.shared[url] = ImageContainer(image: image)
         }
 
         measure {
@@ -34,12 +34,12 @@ class CacheHitPerformanceTests: XCTestCase {
 
     func testAlamofireImage() {
         for url in self.urls {
-            UIImageView.af_sharedImageDownloader.imageCache?.add(image, for: URLRequest(url: url), withIdentifier: nil)
+            UIImageView.af.sharedImageDownloader.imageCache?.add(image, for: URLRequest(url: url), withIdentifier: nil)
         }
 
         measure {
             for url in self.urls {
-                self.view.af_setImage(withURL: url)
+                self.view.af.setImage(withURL: url)
             }
         }
     }
@@ -67,10 +67,11 @@ class CacheHitPerformanceTests: XCTestCase {
             }
         }
     }
-
-    
 }
 
+/// These tests cover the main-thread performance for the scenario where the
+/// fetched image is not availalbe in the memory cache and the request needs
+/// to be sent (cache miss).
 class CacheMissPerformanceTests: XCTestCase {
     let view = UIImageView()
     let urls: [URL] = {
@@ -88,7 +89,7 @@ class CacheMissPerformanceTests: XCTestCase {
      func testAlamofireImage() {
         measure {
             for url in self.urls {
-                self.view.af_setImage(withURL: url)
+                self.view.af.setImage(withURL: url)
             }
         }
      }
