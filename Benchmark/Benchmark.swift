@@ -8,11 +8,7 @@ import Alamofire
 import AlamofireImage
 import Kingfisher
 import SDWebImage
-import PINRemoteImage
-import PINCache
 import AppleSample
-
-//import TwitterImagePipeline
 
 // MARK: - Main-Thread Performance
 
@@ -32,20 +28,6 @@ class CacheHitPerformanceTests: XCTestCase {
         measure {
             for url in self.urls {
                 Nuke.loadImage(with: url, into: self.view)
-//                self.view.nk.setImage(with: url)
-            }
-        }
-    }
-
-    func testPINRemoteImage() {
-        for url in self.urls {
-            let manager = PINRemoteImageManager.shared()
-            manager.cache.setObject(image, forKey: manager.cacheKey(for: url, processorKey: nil))
-        }
-
-        measure {
-            for url in self.urls {
-                self.view.pin_setImage(from: url)
             }
         }
     }
@@ -85,32 +67,8 @@ class CacheHitPerformanceTests: XCTestCase {
             }
         }
     }
+
     
-//    func testTwitterImagePipeline() {
-//        class FetchRequest: NSObject, TIPImageFetchRequest {
-//            var imageURL: URL
-//
-//            init(imageURL url: URL) {
-//                self.imageURL = url
-//            }
-//        }
-//
-//        let pipeline = TIPImagePipeline(identifier: "tip")!
-//        for url in self.urls {
-//            pipeline.operation(with: FetchRequest(imageURL: url), context: nil, delegate: nil)
-//        }
-//
-//        measure {
-//            for url in self.urls {
-//                pipeline.operation(with: FetchRequest(imageURL: url),
-//                                   context: nil,
-//                                   completion: { [weak self] (result, error) in
-//                                    guard let `self` = self, let _ = error else { return }
-//                                    self.view.image = result?.imageContainer.image
-//                })
-//            }
-//        }
-//    }
 }
 
 class CacheMissPerformanceTests: XCTestCase {
@@ -123,14 +81,6 @@ class CacheMissPerformanceTests: XCTestCase {
         measure {
             for url in self.urls {
                 Nuke.loadImage(with: url, into: self.view)
-            }
-        }
-    }
-
-    func testPINRemoteImage() {
-        measure {
-            for url in self.urls {
-                self.view.pin_setImage(from: url)
             }
         }
     }
@@ -158,27 +108,4 @@ class CacheMissPerformanceTests: XCTestCase {
             }
         }
     }
-    
-//    func testTwitterImagePipeline() {
-//        class FetchRequest: NSObject, TIPImageFetchRequest {
-//            var imageURL: URL
-//            
-//            init(imageURL url: URL) {
-//                self.imageURL = url
-//            }
-//        }
-//        
-//        let pipeline = TIPImagePipeline(identifier: "tip")!
-//        
-//        measure {
-//            for url in self.urls {
-//                pipeline.operation(with: FetchRequest(imageURL: url),
-//                                   context: nil,
-//                                   completion: { [weak self] (result, error) in
-//                                    guard let `self` = self, let _ = error else { return }
-//                                    self.view.image = result?.imageContainer.image
-//                })
-//            }
-//        }
-//    }
 }

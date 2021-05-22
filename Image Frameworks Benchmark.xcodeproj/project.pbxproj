@@ -14,11 +14,11 @@
 		0C6A935F1D9FEAA900290284 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0C6A935E1D9FEAA900290284 /* Assets.xcassets */; };
 		0C6A93621D9FEAA900290284 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0C6A93601D9FEAA900290284 /* LaunchScreen.storyboard */; };
 		0C6A937E1D9FEB0900290284 /* Benchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6A937D1D9FEB0900290284 /* Benchmark.swift */; };
+		0CCCE90E2659D18D00FB30D8 /* AppleSample in Frameworks */ = {isa = PBXBuildFile; productRef = 0CCCE90D2659D18D00FB30D8 /* AppleSample */; };
 		0CF5EDFF2659BC2500196E0F /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EDFE2659BC2500196E0F /* Nuke */; };
 		0CF5EE022659BC3300196E0F /* AlamofireImage in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE012659BC3300196E0F /* AlamofireImage */; };
 		0CF5EE052659BC4300196E0F /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE042659BC4300196E0F /* Kingfisher */; };
 		0CF5EE082659BC4E00196E0F /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE072659BC4E00196E0F /* SDWebImage */; };
-		0CF5EE0B2659BCBF00196E0F /* PINRemoteImage in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE0A2659BCBF00196E0F /* PINRemoteImage */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,10 +51,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0CF5EE0B2659BCBF00196E0F /* PINRemoteImage in Frameworks */,
 				0CF5EE052659BC4300196E0F /* Kingfisher in Frameworks */,
 				0CF5EDFF2659BC2500196E0F /* Nuke in Frameworks */,
 				0CF5EE082659BC4E00196E0F /* SDWebImage in Frameworks */,
+				0CCCE90E2659D18D00FB30D8 /* AppleSample in Frameworks */,
 				0CF5EE022659BC3300196E0F /* AlamofireImage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -76,6 +76,7 @@
 				0C6A937C1D9FEB0900290284 /* Benchmark */,
 				0C6A93551D9FEAA900290284 /* Products */,
 				0C28C9A52659BF08001B7D74 /* AppleSample */,
+				0CCCE90C2659D18D00FB30D8 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -111,6 +112,13 @@
 			path = Benchmark;
 			sourceTree = "<group>";
 		};
+		0CCCE90C2659D18D00FB30D8 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -132,7 +140,7 @@
 				0CF5EE012659BC3300196E0F /* AlamofireImage */,
 				0CF5EE042659BC4300196E0F /* Kingfisher */,
 				0CF5EE072659BC4E00196E0F /* SDWebImage */,
-				0CF5EE0A2659BCBF00196E0F /* PINRemoteImage */,
+				0CCCE90D2659D18D00FB30D8 /* AppleSample */,
 			);
 			productName = "Image Frameworks Benchmark";
 			productReference = 0C6A93541D9FEAA900290284 /* Image Frameworks Benchmark.app */;
@@ -195,7 +203,6 @@
 				0CF5EE002659BC3300196E0F /* XCRemoteSwiftPackageReference "AlamofireImage" */,
 				0CF5EE032659BC4300196E0F /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				0CF5EE062659BC4E00196E0F /* XCRemoteSwiftPackageReference "SDWebImage" */,
-				0CF5EE092659BCBF00196E0F /* XCRemoteSwiftPackageReference "PINRemoteImage" */,
 			);
 			productRefGroup = 0C6A93551D9FEAA900290284 /* Products */;
 			projectDirPath = "";
@@ -523,17 +530,13 @@
 				minimumVersion = 5.11.1;
 			};
 		};
-		0CF5EE092659BCBF00196E0F /* XCRemoteSwiftPackageReference "PINRemoteImage" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/pinterest/PINRemoteImage";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.3;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0CCCE90D2659D18D00FB30D8 /* AppleSample */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppleSample;
+		};
 		0CF5EDFE2659BC2500196E0F /* Nuke */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0CF5EDFD2659BC2500196E0F /* XCRemoteSwiftPackageReference "Nuke" */;
@@ -553,11 +556,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0CF5EE062659BC4E00196E0F /* XCRemoteSwiftPackageReference "SDWebImage" */;
 			productName = SDWebImage;
-		};
-		0CF5EE0A2659BCBF00196E0F /* PINRemoteImage */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 0CF5EE092659BCBF00196E0F /* XCRemoteSwiftPackageReference "PINRemoteImage" */;
-			productName = PINRemoteImage;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
