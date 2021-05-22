@@ -1,0 +1,1 @@
+This code is from Apple sample code ["Asynchronously Loading Images into Table and Collection Views"](https://developer.apple.com/documentation/uikit/uiimage/asynchronously_loading_images_into_table_and_collection_views).
