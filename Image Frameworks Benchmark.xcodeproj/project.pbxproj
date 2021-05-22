@@ -195,10 +195,9 @@
 			};
 			buildConfigurationList = 0C6A934F1D9FEAA900290284 /* Build configuration list for PBXProject "Image Frameworks Benchmark" */;
 			compatibilityVersion = "Xcode 3.2";
-			developmentRegion = English;
+			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				English,
 				en,
 				Base,
 			);
