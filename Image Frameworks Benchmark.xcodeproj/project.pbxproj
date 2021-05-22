@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 52;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -14,6 +14,11 @@
 		0C6A935F1D9FEAA900290284 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0C6A935E1D9FEAA900290284 /* Assets.xcassets */; };
 		0C6A93621D9FEAA900290284 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0C6A93601D9FEAA900290284 /* LaunchScreen.storyboard */; };
 		0C6A937E1D9FEB0900290284 /* Benchmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C6A937D1D9FEB0900290284 /* Benchmark.swift */; };
+		0CF5EDFF2659BC2500196E0F /* Nuke in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EDFE2659BC2500196E0F /* Nuke */; };
+		0CF5EE022659BC3300196E0F /* AlamofireImage in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE012659BC3300196E0F /* AlamofireImage */; };
+		0CF5EE052659BC4300196E0F /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE042659BC4300196E0F /* Kingfisher */; };
+		0CF5EE082659BC4E00196E0F /* SDWebImage in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE072659BC4E00196E0F /* SDWebImage */; };
+		0CF5EE0B2659BCBF00196E0F /* PINRemoteImage in Frameworks */ = {isa = PBXBuildFile; productRef = 0CF5EE0A2659BCBF00196E0F /* PINRemoteImage */; };
 		8C5FAFBA7BCA080B4EBBCF47 /* Pods_Benchmark.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0F02DA6A703743A623B646AE /* Pods_Benchmark.framework */; };
 /* End PBXBuildFile section */
 
@@ -47,6 +52,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0CF5EE0B2659BCBF00196E0F /* PINRemoteImage in Frameworks */,
+				0CF5EE052659BC4300196E0F /* Kingfisher in Frameworks */,
+				0CF5EDFF2659BC2500196E0F /* Nuke in Frameworks */,
+				0CF5EE082659BC4E00196E0F /* SDWebImage in Frameworks */,
+				0CF5EE022659BC3300196E0F /* AlamofireImage in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,6 +137,13 @@
 			dependencies = (
 			);
 			name = "Image Frameworks Benchmark";
+			packageProductDependencies = (
+				0CF5EDFE2659BC2500196E0F /* Nuke */,
+				0CF5EE012659BC3300196E0F /* AlamofireImage */,
+				0CF5EE042659BC4300196E0F /* Kingfisher */,
+				0CF5EE072659BC4E00196E0F /* SDWebImage */,
+				0CF5EE0A2659BCBF00196E0F /* PINRemoteImage */,
+			);
 			productName = "Image Frameworks Benchmark";
 			productReference = 0C6A93541D9FEAA900290284 /* Image Frameworks Benchmark.app */;
 			productType = "com.apple.product-type.application";
@@ -186,6 +203,13 @@
 				Base,
 			);
 			mainGroup = 0C6A934B1D9FEAA900290284;
+			packageReferences = (
+				0CF5EDFD2659BC2500196E0F /* XCRemoteSwiftPackageReference "Nuke" */,
+				0CF5EE002659BC3300196E0F /* XCRemoteSwiftPackageReference "AlamofireImage" */,
+				0CF5EE032659BC4300196E0F /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				0CF5EE062659BC4E00196E0F /* XCRemoteSwiftPackageReference "SDWebImage" */,
+				0CF5EE092659BCBF00196E0F /* XCRemoteSwiftPackageReference "PINRemoteImage" */,
+			);
 			productRefGroup = 0C6A93551D9FEAA900290284 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -428,7 +452,8 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 10.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
-				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
@@ -439,7 +464,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
 				INFOPLIST_FILE = "Image Frameworks Benchmark/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.github.kean.Image-Frameworks-Benchmark";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -452,7 +480,10 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
 				INFOPLIST_FILE = "Image Frameworks Benchmark/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = "com.github.kean.Image-Frameworks-Benchmark";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -465,7 +496,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
 				INFOPLIST_FILE = Benchmark/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.github.kean.Benchmark;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -479,7 +514,11 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = NR8DLKJ7E6;
 				INFOPLIST_FILE = Benchmark/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.github.kean.Benchmark;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
@@ -518,6 +557,77 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		0CF5EDFD2659BC2500196E0F /* XCRemoteSwiftPackageReference "Nuke" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kean/Nuke.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
+		0CF5EE002659BC3300196E0F /* XCRemoteSwiftPackageReference "AlamofireImage" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/AlamofireImage";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.2.0;
+			};
+		};
+		0CF5EE032659BC4300196E0F /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.3.0;
+			};
+		};
+		0CF5EE062659BC4E00196E0F /* XCRemoteSwiftPackageReference "SDWebImage" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SDWebImage/SDWebImage.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.11.1;
+			};
+		};
+		0CF5EE092659BCBF00196E0F /* XCRemoteSwiftPackageReference "PINRemoteImage" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pinterest/PINRemoteImage";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		0CF5EDFE2659BC2500196E0F /* Nuke */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CF5EDFD2659BC2500196E0F /* XCRemoteSwiftPackageReference "Nuke" */;
+			productName = Nuke;
+		};
+		0CF5EE012659BC3300196E0F /* AlamofireImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CF5EE002659BC3300196E0F /* XCRemoteSwiftPackageReference "AlamofireImage" */;
+			productName = AlamofireImage;
+		};
+		0CF5EE042659BC4300196E0F /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CF5EE032659BC4300196E0F /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		0CF5EE072659BC4E00196E0F /* SDWebImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CF5EE062659BC4E00196E0F /* XCRemoteSwiftPackageReference "SDWebImage" */;
+			productName = SDWebImage;
+		};
+		0CF5EE0A2659BCBF00196E0F /* PINRemoteImage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 0CF5EE092659BCBF00196E0F /* XCRemoteSwiftPackageReference "PINRemoteImage" */;
+			productName = PINRemoteImage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 0C6A934C1D9FEAA900290284 /* Project object */;
 }
