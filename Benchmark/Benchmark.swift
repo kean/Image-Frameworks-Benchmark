@@ -10,6 +10,8 @@ import Kingfisher
 import SDWebImage
 import PINRemoteImage
 import PINCache
+import AppleSample
+
 //import TwitterImagePipeline
 
 // MARK: - Main-Thread Performance
