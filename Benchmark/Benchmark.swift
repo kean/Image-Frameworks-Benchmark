@@ -15,56 +15,60 @@ import AppleSample
 class CacheHitPerformanceTests: XCTestCase {
     let view = UIImageView()
     let image = UIImage(named: "fixture")! // same image so that it gets decoded once
-    let urls: [URL] = {
-        // 10_000 iterations, but only 100 unique URLs
-        return (0..<25_000).map { _ in return URL(string: "http://test.com/\(arc4random_uniform(100)).jpeg")! }
-    }()
+    // 10_000 iterations, but 100 unique URLs
+    let urls: [URL] = (0..<25_000).map { _ in URL(string: "http://test.com/\(arc4random_uniform(100)).jpeg")! }
 
     func testNuke() {
-        for url in self.urls {
+        for url in urls {
             Nuke.ImageCache.shared[url] = ImageContainer(image: image)
         }
 
         measure {
-            for url in self.urls {
-                Nuke.loadImage(with: url, into: self.view)
+            for url in urls {
+                Nuke.loadImage(with: url, into: view)
             }
         }
     }
 
     func testAlamofireImage() {
-        for url in self.urls {
+        for url in urls {
             UIImageView.af.sharedImageDownloader.imageCache?.add(image, for: URLRequest(url: url), withIdentifier: nil)
         }
 
         measure {
-            for url in self.urls {
-                self.view.af.setImage(withURL: url)
+            for url in urls {
+                view.af.setImage(withURL: url)
             }
         }
     }
 
     func testKingfisher() {
-        for url in self.urls {
+        for url in urls {
             KingfisherManager.shared.cache.store(image, original: nil, forKey: url.absoluteString, processorIdentifier: "", cacheSerializer: DefaultCacheSerializer.default, toDisk: false, completionHandler: nil)
         }
 
         measure {
-            for url in self.urls {
-                self.view.kf.setImage(with: url)
+            for url in urls {
+                view.kf.setImage(with: url)
             }
         }
     }
 
     func testSDWebImage() {
-        for url in self.urls {
+        for url in urls {
             SDImageCache.shared.store(image, imageData: nil, forKey: url.absoluteString, toDisk: false, completion: nil)
         }
 
         measure {
-            for url in self.urls {
-                self.view.sd_setImage(with: url)
+            for url in urls {
+                view.sd_setImage(with: url)
             }
+        }
+    }
+
+    func testAppleSample() {
+        for url in urls {
+            Nuke.ImageCache.shared[url] = ImageContainer(image: image)
         }
     }
 }
@@ -74,38 +78,36 @@ class CacheHitPerformanceTests: XCTestCase {
 /// to be sent (cache miss).
 class CacheMissPerformanceTests: XCTestCase {
     let view = UIImageView()
-    let urls: [URL] = {
-        return (0..<20_000).map { _ in return URL(string: "http://test.com/\(arc4random()).jpeg")! }
-    }()
+    let urls: [URL] = (0..<20_000).map { _ in URL(string: "http://test.com/\(arc4random()).jpeg")! }
 
     func testNuke() {
         measure {
-            for url in self.urls {
-                Nuke.loadImage(with: url, into: self.view)
+            for url in urls {
+                Nuke.loadImage(with: url, into: view)
             }
         }
     }
 
      func testAlamofireImage() {
         measure {
-            for url in self.urls {
-                self.view.af.setImage(withURL: url)
+            for url in urls {
+                view.af.setImage(withURL: url)
             }
         }
      }
 
     func testKingfisher() {
         measure {
-            for url in self.urls {
-                self.view.kf.setImage(with: url)
+            for url in urls {
+                view.kf.setImage(with: url)
             }
         }
     }
 
     func testSDWebImage() {
         measure {
-            for url in self.urls {
-                self.view.sd_setImage(with: url)
+            for url in urls {
+                view.sd_setImage(with: url)
             }
         }
     }
