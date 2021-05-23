@@ -27,6 +27,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
+                view.image = nil
                 Nuke.loadImage(with: url, into: view)
             }
         }
@@ -39,6 +40,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
+                view.image = nil
                 view.af.setImage(withURL: url)
             }
         }
@@ -51,6 +53,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
+                view.image = nil
                 view.kf.setImage(with: url)
             }
         }
@@ -63,6 +66,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
+                view.image = nil
                 view.sd_setImage(with: url)
             }
         }
@@ -83,6 +87,7 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for (url, item) in allItems {
+                view.image = nil
                 AppleSample.ImageCache.publicCache.load(url: url, item: item) { item, image in
                     // Techincally we update the item in this callback and reload
                     // the view that is currenltly displaying it.
