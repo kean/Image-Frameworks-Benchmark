@@ -15,14 +15,21 @@ public class ImageCache {
     public final func image(url: NSURL) -> UIImage? {
         return cachedImages.object(forKey: url)
     }
+
+    public final func storeImage(_ image: UIImage, for url: NSURL) {
+        cachedImages.setObject(image, forKey: url)
+    }
+
     /// - Tag: cache
     // Returns the cached image if available, otherwise asynchronously loads and caches it.
     public final func load(url: NSURL, item: Item, completion: @escaping (Item, UIImage?) -> Swift.Void) {
         // Check for a cached image.
         if let cachedImage = image(url: url) {
-            DispatchQueue.main.async {
+            // This is a slightly modified version of the sample to ensure instant
+            // cache lookup
+//            DispatchQueue.main.async {
                 completion(item, cachedImage)
-            }
+//            }
             return
         }
         // In case there are more than one requestor for the image, we append their completion block.

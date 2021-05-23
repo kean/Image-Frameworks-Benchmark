@@ -7,8 +7,8 @@ A model Item for displaying images.
 import UIKit
 
 public class Item: Hashable {
-    var image: UIImage!
-    let url: URL!
+    var image: UIImage?
+    let url: NSURL!
     let identifier = UUID()
 
     public func hash(into hasher: inout Hasher) {
@@ -19,7 +19,7 @@ public class Item: Hashable {
         return lhs.identifier == rhs.identifier
     }
 
-    public init(image: UIImage, url: URL) {
+    public init(image: UIImage?, url: NSURL) {
         self.image = image
         self.url = url
     }

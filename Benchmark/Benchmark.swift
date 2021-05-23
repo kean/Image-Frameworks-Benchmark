@@ -67,8 +67,26 @@ class CacheHitPerformanceTests: XCTestCase {
     }
 
     func testAppleSample() {
+        let urls = urls.map { $0 as NSURL }
+
         for url in urls {
-            Nuke.ImageCache.shared[url] = ImageContainer(image: image)
+            AppleSample.ImageCache.publicCache.storeImage(image, for: url)
+        }
+
+        let items = urls.map {
+            Item(image: nil, url: NSURL(string: $0.absoluteString!)!)
+        }
+
+        let allItems = zip(urls, items)
+
+        measure {
+            for (url, item) in allItems {
+                AppleSample.ImageCache.publicCache.load(url: url, item: item) { item, image in
+                    // Techincally we update the item in this callback and reload
+                    // the view that is currenltly displaying it.
+                    self.view.image = image
+                }
+            }
         }
     }
 }
@@ -108,6 +126,26 @@ class CacheMissPerformanceTests: XCTestCase {
         measure {
             for url in urls {
                 view.sd_setImage(with: url)
+            }
+        }
+    }
+
+    func testAppleSample() {
+        let urls = urls.map { $0 as NSURL }
+
+        let items = urls.map {
+            Item(image: nil, url: $0)
+        }
+
+        let allItems = zip(urls, items)
+
+        measure {
+            for (url, item) in allItems {
+                AppleSample.ImageCache.publicCache.load(url: url, item: item) { item, image in
+                    // Techincally we update the item in this callback and reload
+                    // the view that is currenltly displaying it.
+                    self.view.image = image
+                }
             }
         }
     }
