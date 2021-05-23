@@ -9,8 +9,6 @@ import AlamofireImage
 import Kingfisher
 import SDWebImage
 import AppleSample
-import YYWebImage
-//import TwitterImagePipeline
 
 // MARK: - Main-Thread Performance
 
@@ -30,18 +28,6 @@ class CacheHitPerformanceTests: XCTestCase {
         measure {
             for url in urls {
                 Nuke.loadImage(with: url, into: view)
-            }
-        }
-    }
-    
-    func testYYImage() {
-        for url in self.urls {
-            YYWebImageManager.shared().cache?.setImage(image, forKey: url.absoluteString)
-        }
-        
-        measure {
-            for url in self.urls {
-                self.view.yy_setImage(with: url)
             }
         }
     }
@@ -112,21 +98,8 @@ class CacheHitPerformanceTests: XCTestCase {
 /// to be sent (cache miss).
 class CacheMissPerformanceTests: XCTestCase {
     let view = UIImageView()
-<<<<<<< HEAD
     let urls: [URL] = (0..<20_000).map { _ in URL(string: "http://test.com/\(arc4random()).jpeg")! }
-=======
-    let urls: [URL] = {
-        return (0..<20_000).map { _ in return URL(string: "http://test.com/\(arc4random()).jpeg")! }
-    }()
-    
-    func testYYImage() {
-        measure {
-            for url in self.urls {
-                self.view.yy_setImage(with: url)
-            }
-        }
-    }
->>>>>>> 983f44a6e13b1c75327bdee199db37aac37a2680
+
 
     func testNuke() {
         measure {
