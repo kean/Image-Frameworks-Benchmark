@@ -22,9 +22,9 @@ view.af.setImage(withURL: url)
 
 The results (higher is better):
 
-<img width="800" src="https://user-images.githubusercontent.com/1567433/119270738-1bdb2000-bbcc-11eb-924b-608b5d6f760b.png">
+<img width="700" src="https://user-images.githubusercontent.com/1567433/119271801-10d6be80-bbd1-11eb-8b09-5ef856e379f0.png">
 
-<img width="800" src="https://user-images.githubusercontent.com/1567433/119270739-1c73b680-bbcc-11eb-9b18-c7c6e31537cc.png">
+<img width="700" src="https://user-images.githubusercontent.com/1567433/119271802-10d6be80-bbd1-11eb-996e-84a4eef0ebfa.png">
 
 > - The reason AlamofireImage is so slow is that it's creating `URLRequest` instances and attaching HTTP headers on the main thread, which is expensive and not needed for memory cache lookup
 > - Kingfisher performs disk reads on the main thread making Cache Miss scenario slow 
