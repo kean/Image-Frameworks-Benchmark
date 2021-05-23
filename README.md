@@ -7,7 +7,7 @@
 - [AlamofireImage](https://github.com/Alamofire/AlamofireImage) 4.2.0 · Swift
 - [SDWebImage](https://github.com/rs/SDWebImage) 5.11.1 · Objective-C
 
-> Only comparing Swift frameworks, and SDWebImage as an exception because it's still actively maintained and often used even today.
+> Only comparing Swift frameworks and SDWebImage as an exception because it's still actively maintained and often used even today.
 
 ## Main Thread Performance
 
