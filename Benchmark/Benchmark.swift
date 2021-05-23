@@ -12,10 +12,17 @@ import AppleSample
 
 // MARK: - Main-Thread Performance
 
+class CustomImageView: UIImageView {
+    override var image: UIImage? {
+        get { nil }
+        set { /* Do nothing removing display from the equation */ }
+    }
+}
+
 /// These tests cover the main-thread performance for the scenario where the
 /// fetched image is availalbe in the memory cache (cache hit).
 class CacheHitPerformanceTests: XCTestCase {
-    let view = UIImageView()
+    let view = CustomImageView()
     let image = UIImage(named: "fixture")! // same image so that it gets decoded once
     // 10_000 iterations, but 100 unique URLs
     let urls: [URL] = (0..<25_000).map { _ in URL(string: "http://test.com/\(arc4random_uniform(100)).jpeg")! }
@@ -27,7 +34,6 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
-                view.image = nil
                 Nuke.loadImage(with: url, into: view)
             }
         }
@@ -40,7 +46,6 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
-                view.image = nil
                 view.af.setImage(withURL: url)
             }
         }
@@ -53,7 +58,6 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
-                view.image = nil
                 view.kf.setImage(with: url)
             }
         }
@@ -66,7 +70,6 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for url in urls {
-                view.image = nil
                 view.sd_setImage(with: url)
             }
         }
@@ -87,7 +90,6 @@ class CacheHitPerformanceTests: XCTestCase {
 
         measure {
             for (url, item) in allItems {
-                view.image = nil
                 AppleSample.ImageCache.publicCache.load(url: url, item: item) { item, image in
                     // Techincally we update the item in this callback and reload
                     // the view that is currenltly displaying it.
@@ -102,7 +104,7 @@ class CacheHitPerformanceTests: XCTestCase {
 /// fetched image is not availalbe in the memory cache and the request needs
 /// to be sent (cache miss).
 class CacheMissPerformanceTests: XCTestCase {
-    let view = UIImageView()
+    let view = CustomImageView()
     let urls: [URL] = (0..<20_000).map { _ in URL(string: "http://test.com/\(arc4random()).jpeg")! }
 
 
