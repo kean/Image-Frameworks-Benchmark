@@ -27,7 +27,5 @@ The results (higher is better):
 <img width="700" src="https://user-images.githubusercontent.com/1567433/119271802-10d6be80-bbd1-11eb-996e-84a4eef0ebfa.png">
 
 > - The reason AlamofireImage is so slow is that it's creating `URLRequest` instances and attaching HTTP headers on the main thread, which is expensive and not needed for memory cache lookup
-> - Kingfisher performs disk reads on the main thread making Cache Miss scenario slow 
->
-> Measured on iPhone 11 Pro
+> - Kingfisher performs disk reads on the main thread
 
